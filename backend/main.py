@@ -6,94 +6,32 @@ from typing import List
 import models, schemas
 from database import engine, get_db
 
-# 建立所有的資料表
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="偶像周邊二手交易與訂單管理系統 API")
+app = FastAPI(title="偶像周邊二手交易與訂單管理系統 API", description="基於實體關係圖(ERD)完整設計的交易系統")
 
-# 設定 CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # 允許所有前端來源
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.post("/products/", response_model=schemas.ProductResponse, summary="多維度商品上架")
-def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
-    # 1. 建立商品
-    db_product = models.Product(
-        SellerID=product.SellerID,
-        Price=product.Price,
-        Condition=product.Condition,
-        TradeMethod=product.TradeMethod
-    )
-    db.add(db_product)
+# ===============================
+# 1. 使用者與信譽模組 (User & Reputation)
+# ===============================
+@app.post("/users/", response_model=schemas.UserResponse, tags=["Users"])
+def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = models.User(Account=user.Account, Password=user.Password, Email=user.Email)
+    db.add(db_user)
     db.commit()
-    db.refresh(db_product)
-    
-    # 2. 建立關聯表 (解決 N:M)
-    for member_id in product.MemberIDs:
-        rel = models.ProductMemberRel(ProductID=db_product.ProductID, MemberID=member_id)
-        db.add(rel)
-    db.commit()
-    
-    # 3. 願望清單自動撮合 (貨找人)
-    # 找尋是否有買家想要這個成員的商品，且預算足夠、狀態符合
-    matched_wishes = db.query(models.Wishlist).filter(
-        models.Wishlist.MemberID.in_(product.MemberIDs),
-        models.Wishlist.MaxPrice >= product.Price
-    ).all()
-    
-    # TODO: 實務上這裡可以透過 Webhook 或 Email 發送通知給符合條件的 UserID
-    print(f"找到 {len(matched_wishes)} 筆符合條件的願望清單！")
-    
-    return db_product
+    db.refresh(db_user)
+    return db_user
 
-@app.get("/products/search", summary="精確搜尋特定成員周邊 (包含多成員卡)")
-def search_products_by_member(member_id: int, db: Session = Depends(get_db)):
-    # 透過 JOIN 篩選出包含該成員的所有品項
-    products = db.query(models.Product).join(models.ProductMemberRel).filter(
-        models.ProductMemberRel.MemberID == member_id,
-        models.Product.Status == "Available"
-    ).all()
-    return products
-
-@app.post("/orders/", summary="建立訂單並扣除庫存(悲觀鎖概念)")
-def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
-    # 使用 with_for_update 實作悲觀鎖避免超賣 Race Condition
-    product = db.query(models.Product).filter(
-        models.Product.ProductID == order.ProductID
-    ).with_for_update().first()
-    
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    if product.Status != "Available":
-        raise HTTPException(status_code=400, detail="Product is already sold or removed")
-        
-    # 建立訂單，並產生歷史快照價格
-    db_order = models.Order(
-        BuyerID=order.BuyerID,
-        ProductID=order.ProductID,
-        OrderPrice=product.Price,
-        Status="Pending"
-    )
-    db.add(db_order)
-    
-    # 軟刪除商品，將狀態改為 Sold
-    product.Status = "Sold"
-    db.add(product)
-    
-    db.commit()
-    db.refresh(db_order)
-    return db_order
-
-@app.get("/users/{user_id}/reputation", summary="查詢並動態計算賣家信譽評分")
+@app.get("/users/{user_id}/reputation", tags=["Users"])
 def get_seller_reputation(user_id: int, db: Session = Depends(get_db)):
-    # 聚合查詢 (GROUP BY 概念)
-    # 取得這個賣家所有已售出訂單的評價平均
-    # (實務上可以定期排程寫回 User 表，這裡示範即時動態計算)
+    # SQL 聚合查詢: 計算該賣家歷史訂單評價
     result = db.query(
         func.avg(models.Review.PackingScore).label('avg_packing'),
         func.avg(models.Review.VideoScore).label('avg_video'),
@@ -103,7 +41,7 @@ def get_seller_reputation(user_id: int, db: Session = Depends(get_db)):
     ).first()
     
     if not result.avg_packing:
-        return {"message": "No reviews yet", "reputation": 5.0}
+        return {"message": "尚無評價", "reputation": 5.0}
         
     total_score = (result.avg_packing + result.avg_video + result.avg_speed) / 3
     return {
@@ -114,6 +52,106 @@ def get_seller_reputation(user_id: int, db: Session = Depends(get_db)):
         "Total_Reputation": round(total_score, 2)
     }
 
-@app.get("/", summary="Root")
+# ===============================
+# 2. 團體與成員模組 (Group & Member)
+# ===============================
+@app.get("/groups/", response_model=List[schemas.GroupResponse], tags=["Idols"])
+def get_groups(db: Session = Depends(get_db)):
+    return db.query(models.Group).all()
+
+@app.get("/groups/{group_id}/members", response_model=List[schemas.MemberResponse], tags=["Idols"])
+def get_group_members(group_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Member).filter(models.Member.GroupID == group_id).all()
+
+# ===============================
+# 3. 商品與搜尋模組 (Product)
+# ===============================
+@app.post("/products/", response_model=schemas.ProductResponse, tags=["Products"])
+def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
+    db_product = models.Product(
+        SellerID=product.SellerID, Price=product.Price,
+        Condition=product.Condition, TradeMethod=product.TradeMethod
+    )
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    
+    # N:M 關聯寫入 (商品標記成員)
+    for member_id in product.MemberIDs:
+        rel = models.ProductMemberRel(ProductID=db_product.ProductID, MemberID=member_id)
+        db.add(rel)
+    db.commit()
+    
+    # 願望清單自動撮合比對 (貨找人)
+    matched_wishes = db.query(models.Wishlist).filter(
+        models.Wishlist.MemberID.in_(product.MemberIDs),
+        models.Wishlist.MaxPrice >= product.Price
+    ).all()
+    print(f"系統自動比對：找到 {len(matched_wishes)} 名買家的願望清單符合此周邊！")
+    
+    return db_product
+
+@app.get("/products/search", response_model=List[schemas.ProductResponse], tags=["Products"])
+def search_products(member_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Product).join(models.ProductMemberRel).filter(
+        models.ProductMemberRel.MemberID == member_id,
+        models.Product.Status == "Available"
+    ).all()
+
+# ===============================
+# 4. 願望清單模組 (Wishlist)
+# ===============================
+@app.post("/wishlists/", response_model=schemas.WishlistResponse, tags=["Wishlist"])
+def add_to_wishlist(wish: schemas.WishlistCreate, db: Session = Depends(get_db)):
+    db_wish = models.Wishlist(**wish.model_dump())
+    db.add(db_wish)
+    db.commit()
+    db.refresh(db_wish)
+    return db_wish
+
+@app.get("/users/{user_id}/wishlists", response_model=List[schemas.WishlistResponse], tags=["Wishlist"])
+def get_user_wishlists(user_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Wishlist).filter(models.Wishlist.UserID == user_id).all()
+
+# ===============================
+# 5. 訂單與評價模組 (Order & Review)
+# ===============================
+@app.post("/orders/", response_model=schemas.OrderResponse, tags=["Orders"])
+def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+    # 悲觀鎖 (Pessimistic Locking) 避免限量小卡超賣
+    product = db.query(models.Product).filter(
+        models.Product.ProductID == order.ProductID
+    ).with_for_update().first()
+    
+    if not product or product.Status != "Available":
+        raise HTTPException(status_code=400, detail="商品不存在或已售出")
+        
+    db_order = models.Order(
+        BuyerID=order.BuyerID,
+        ProductID=order.ProductID,
+        OrderPrice=product.Price, # 歷史快照
+        Status="Completed"
+    )
+    db.add(db_order)
+    
+    product.Status = "Sold" # 軟刪除
+    db.add(product)
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+@app.post("/reviews/", response_model=schemas.ReviewResponse, tags=["Orders"])
+def create_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.OrderID == review.OrderID).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    db_review = models.Review(**review.model_dump())
+    db.add(db_review)
+    db.commit()
+    db.refresh(db_review)
+    return db_review
+
+@app.get("/", tags=["Root"])
 def read_root():
     return {"message": "Welcome to Idol Merchandise Trading API"}

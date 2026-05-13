@@ -8,6 +8,15 @@
 3. **悲觀鎖防超賣機制**：針對限量絕版小卡的搶購情境，訂單結帳流程採用 `SELECT ... FOR UPDATE` 悲觀鎖，確保交易一致性。
 4. **專屬信譽評估模型**：捨棄傳統單一評分，專門為偶像圈設計了「包裝保護度」、「對光錄影確認」、「出貨速度」三維度評分，並透過 SQL 聚合查詢動態計算賣家信譽。
 
+## 📊 ERD 實體關係對應與 API 實作
+根據專案的**實體關係圖 (ERD)**，本後端已將圖中所有的**實體 (Entities)** 與**關係 (Relationships)** 轉換為對應的資料表與完整的 CRUD API：
+
+1. **使用者 (User)**：包含註冊與登入資訊，具備 `1:N` 購買/販售/設定願望清單之關係。對應 API：`POST /users/`。
+2. **團體與成員 (Group & Member)**：團體 `1:N` 包含成員。對應 API：`GET /groups/`、`GET /groups/{id}/members`。
+3. **商品 (Product) 與標記成員**：為了解決 ERD 中商品與成員的 **多對多 (N:M)** 關係，我們實作了 `Product_Member_Rel` 關聯表。對應 API：`POST /products/` 與 `GET /products/search`。
+4. **願望清單 (Wishlist)**：記錄 User 追蹤特定 Member 周邊的需求 (`N:1`)。對應 API：`POST /wishlists/`、`GET /users/{id}/wishlists`。
+5. **訂單與評價 (Order & Review)**：一筆訂單對應一項商品 (`1:1`)，並可產生一筆專屬評價 (`1:1`)。對應 API：`POST /orders/` 與 `POST /reviews/`。
+
 ## 📂 專案架構
 ```text
 database-teamproject/
