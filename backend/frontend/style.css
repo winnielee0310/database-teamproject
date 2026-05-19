@@ -1,12 +1,12 @@
 :root {
-    --primary: #f472b6;
-    --primary-hover: #db2777;
-    --secondary: #fb7185;
-    --bg-dark: #fff1f2;
-    --text-main: #334155;
-    --text-muted: #64748b;
-    --glass-bg: rgba(255, 255, 255, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.8);
+    --primary: #a855f7;
+    --primary-hover: #9333ea;
+    --secondary: #ec4899;
+    --bg-dark: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -74,7 +74,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(15, 23, 42, 0.8);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--glass-border);
 }
@@ -82,7 +82,7 @@ body {
 .logo {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--text-main);
+    color: white;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -113,11 +113,10 @@ nav a:hover, nav a.active {
 }
 .reputation {
     font-size: 0.9rem;
-    background: rgba(244, 114, 182, 0.15);
+    background: rgba(255, 255, 255, 0.1);
     padding: 4px 10px;
     border-radius: 20px;
-    color: #db2777;
-    font-weight: 600;
+    color: #ffd700;
 }
 
 /* 內容區 */
@@ -158,13 +157,13 @@ nav a:hover, nav a.active {
     padding: 12px 20px;
     border-radius: 12px;
     border: 1px solid var(--glass-border);
-    background: rgba(255, 255, 255, 0.8);
-    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
     font-size: 1rem;
     flex: 1;
     outline: none;
 }
-.search-bar select option { background: var(--bg-dark); color: var(--text-main); }
+.search-bar select option { background: var(--bg-dark); }
 
 .btn-primary {
     background: linear-gradient(to right, var(--primary), var(--secondary));
@@ -179,7 +178,7 @@ nav a:hover, nav a.active {
 }
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(244, 114, 182, 0.4);
+    box-shadow: 0 10px 20px rgba(168, 85, 247, 0.3);
 }
 
 /* 商品列表 */
@@ -218,11 +217,10 @@ nav a:hover, nav a.active {
     font-size: 0.8rem;
     padding: 4px 8px;
     border-radius: 8px;
-    background: rgba(244, 114, 182, 0.1);
-    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.1);
 }
-.tag.condition { background: rgba(244, 114, 182, 0.2); color: #be185d; }
-.tag.method { background: rgba(251, 113, 133, 0.2); color: #e11d48; }
+.tag.condition { background: rgba(236, 72, 153, 0.2); color: #fbcfe8; }
+.tag.method { background: rgba(168, 85, 247, 0.2); color: #e9d5ff; }
 
 /* 彈窗 */
 .modal {

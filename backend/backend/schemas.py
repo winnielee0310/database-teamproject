@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
-from datetime import datetime
 
 # --- User ---
 class UserCreate(BaseModel):
@@ -37,36 +36,26 @@ class GroupResponse(BaseModel):
 class ProductCreate(BaseModel):
     SellerID: int
     Price: float = Field(..., gt=0)
-    ProductName: str
-    Description: Optional[str] = None
+    Condition: str
     TradeMethod: str
-    MemberIDs: Optional[List[int]] = []
-    CustomGroupName: Optional[str] = None
-    CustomMemberNames: Optional[List[str]] = None
-    ImageUrl: Optional[str] = None
+    MemberIDs: List[int]
 
 class ProductResponse(BaseModel):
     ProductID: int
     SellerID: int
     Price: float
-    ProductName: str
-    Description: Optional[str] = None
+    Condition: str
     TradeMethod: str
     Status: str
-    ImageUrl: Optional[str] = None
-    MemberNames: Optional[List[str]] = []
-    GroupNames: Optional[List[str]] = []
     class Config:
         from_attributes = True
 
 # --- Wishlist ---
 class WishlistCreate(BaseModel):
     UserID: int
-    MemberID: Optional[int] = None
+    MemberID: int
     MaxPrice: float = Field(..., gt=0)
     ConditionReq: Optional[str] = None
-    CustomGroupName: Optional[str] = None
-    CustomMemberName: Optional[str] = None
 
 class WishlistResponse(BaseModel):
     WishID: int
@@ -107,23 +96,5 @@ class ReviewResponse(BaseModel):
     VideoScore: int
     SpeedScore: int
     Comment: Optional[str]
-    class Config:
-        from_attributes = True
-
-class MessageCreate(BaseModel):
-    ProductID: int
-    SenderID: int
-    ReceiverID: int
-    Content: str
-    MediaUrl: Optional[str] = None
-
-class MessageResponse(BaseModel):
-    MessageID: int
-    ProductID: int
-    SenderID: int
-    ReceiverID: int
-    Content: str
-    SentAt: datetime
-    MediaUrl: Optional[str] = None
     class Config:
         from_attributes = True

@@ -23,19 +23,15 @@ class Member(Base):
     MemberID = Column(Integer, primary_key=True, index=True, autoincrement=True)
     GroupID = Column(Integer, ForeignKey("Group.GroupID", ondelete="CASCADE"), nullable=False)
     MemberName = Column(String(100), nullable=False)
-    
-    group = relationship("Group")
 
 class Product(Base):
     __tablename__ = "Product"
     ProductID = Column(Integer, primary_key=True, index=True, autoincrement=True)
     SellerID = Column(Integer, ForeignKey("User.UserID"), nullable=False)
     Price = Column(DECIMAL(10, 2), nullable=False)
-    ProductName = Column(String(100), nullable=False)
-    Description = Column(Text, nullable=True)
+    Condition = Column(String(50), nullable=False)
     TradeMethod = Column(String(50), nullable=False)
     Status = Column(String(20), default="Available")
-    ImageUrl = Column(String(255), nullable=True)
     
     # 關聯
     seller = relationship("User")
@@ -75,17 +71,3 @@ class Review(Base):
     VideoScore = Column(Integer, nullable=False)
     SpeedScore = Column(Integer, nullable=False)
     Comment = Column(Text)
-
-class Message(Base):
-    __tablename__ = "Message"
-    MessageID = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    ProductID = Column(Integer, ForeignKey("Product.ProductID", ondelete="CASCADE"), nullable=False)
-    SenderID = Column(Integer, ForeignKey("User.UserID"), nullable=False)
-    ReceiverID = Column(Integer, ForeignKey("User.UserID"), nullable=False)
-    Content = Column(Text, nullable=False)
-    MediaUrl = Column(String(255), nullable=True)
-    SentAt = Column(DateTime, default=datetime.utcnow)
-    
-    product = relationship("Product")
-    sender = relationship("User", foreign_keys=[SenderID])
-    receiver = relationship("User", foreign_keys=[ReceiverID])

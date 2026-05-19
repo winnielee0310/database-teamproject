@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idol Trade | 偶像周邊交易</title>
+    <meta name="description" content="最安全、智能的偶像周邊二手交易與訂單管理系統">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 背景裝飾 -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <header class="glass-header">
+        <div class="logo">
+            <i class="fa-solid fa-star"></i> Idol Trade
+        </div>
+        <nav>
+            <a href="#" class="active">首頁 (Home)</a>
+            <a href="#">願望清單 (Wishlist)</a>
+            <a href="#">我的訂單 (Orders)</a>
+        </nav>
+        <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=Winnie&background=9b51e0&color=fff" alt="User">
+            <span id="reputation-badge" class="reputation">信用載入中...</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- 英雄區塊 -->
+        <section class="hero glass-panel">
+            <h1>尋找您的<span class="gradient-text">命定周邊</span></h1>
+            <p>透過最先進的「多成員關聯搜尋」與「願望自動撮合」尋找稀有小卡</p>
+            
+            <div class="search-bar">
+                <select id="member-select">
+                    <option value="4">Haerin (NewJeans)</option>
+                    <option value="7">Mingyu (SEVENTEEN)</option>
+                    <option value="8">Wonwoo (SEVENTEEN)</option>
+                    <option value="9">Wonyoung (IVE)</option>
+                </select>
+                <button id="search-btn" class="btn-primary">
+                    <i class="fa-solid fa-magnifying-glass"></i> 搜尋周邊
+                </button>
+            </div>
+        </section>
+
+        <!-- 商品展示區 -->
+        <section class="product-section">
+            <div class="section-title">
+                <h2>搜尋結果 <span id="result-count">(0)</span></h2>
+            </div>
+            <div id="product-grid" class="product-grid">
+                <!-- JavaScript 將動態渲染商品卡片於此 -->
+            </div>
+        </section>
+    </main>
+
+    <!-- 購買確認彈窗 -->
+    <div id="buy-modal" class="modal">
+        <div class="modal-content glass-panel">
+            <span class="close-btn">&times;</span>
+            <h2>確認購買</h2>
+            <p>確定要以 <span id="modal-price" class="gradient-text"></span> 購買此周邊嗎？</p>
+            <div class="modal-actions">
+                <button id="confirm-buy-btn" class="btn-primary">確認結帳 (防超賣保護中)</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
