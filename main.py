@@ -7,10 +7,14 @@ import models, schemas
 from database import engine, get_db
 import os
 import shutil
+from fastapi.staticfiles import StaticFiles
+
+os.makedirs("uploads", exist_ok=True)
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="偶像周邊二手交易與訂單管理系統 API", description="基於實體關係圖(ERD)完整設計的交易系統")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -187,12 +191,12 @@ def search_products(member_name: str = None, group_name: str = None, db: Session
 
 @app.post("/upload-image/", tags=["Products"])
 def upload_image(file: UploadFile = File(...)):
-    upload_dir = "../frontend"
+    upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    return {"ImageUrl": file.filename}
+    return {"ImageUrl": file.filename, "filename": file.filename}
 
 # ===============================
 # 4. 願望清單模組 (Wishlist)
