@@ -1,12 +1,12 @@
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = "http://127.0.0.1:8001";
 let CURRENT_USER_ID = 1;
 
 function switchUser() {
     CURRENT_USER_ID = parseInt(document.getElementById('user-selector').value);
     loadUserReputation(CURRENT_USER_ID);
-    if(document.getElementById('tab-profile').style.display === 'block') loadProfile();
-    if(document.getElementById('tab-orders').style.display === 'block') loadOrders();
-    if(document.getElementById('tab-wishlist').style.display === 'block') loadWishlists();
+    if (document.getElementById('tab-profile').style.display === 'block') loadProfile();
+    if (document.getElementById('tab-orders').style.display === 'block') loadOrders();
+    if (document.getElementById('tab-wishlist').style.display === 'block') loadWishlists();
 }
 
 let currentSelectedProductId = null;
@@ -30,7 +30,7 @@ async function loadPopularMembers() {
             memberMap[m.MemberID] = m.MemberName;
             return `<option value="${m.MemberName}">`;
         }).join('');
-        
+
         if (!document.getElementById('popular-members')) {
             const datalist = document.createElement('datalist');
             datalist.id = 'popular-members';
@@ -44,14 +44,14 @@ async function loadPopularMembers() {
             groupMap[g.GroupID] = g.GroupName;
             return `<option value="${g.GroupName}">`;
         }).join('');
-        
+
         if (!document.getElementById('popular-groups')) {
             const datalist = document.createElement('datalist');
             datalist.id = 'popular-groups';
             document.body.appendChild(datalist);
         }
         document.getElementById('popular-groups').innerHTML = datalistGroup;
-    } catch(err) { console.error('Failed to load popular members', err); }
+    } catch (err) { console.error('Failed to load popular members', err); }
 }
 
 // 讀取賣家信譽 (展示聚合查詢功能)
@@ -77,21 +77,21 @@ async function searchProducts() {
     const groupName = groupInput ? groupInput.value.trim() : '';
     const grid = document.getElementById('product-grid');
     const countSpan = document.getElementById('result-count');
-    
+
     grid.innerHTML = '<p style="text-align:center; color:#94a3b8; grid-column: 1/-1;">搜尋中...</p>';
-    
+
     try {
         let url = `${API_BASE}/products/search?`;
         if (memberName) url += `member_name=${encodeURIComponent(memberName)}&`;
         if (groupName) url += `group_name=${encodeURIComponent(groupName)}`;
-        
+
         const res = await fetch(url);
         const products = await res.json();
         currentSearchProducts = products;
-        
+
         countSpan.innerText = `(${products.length})`;
         grid.innerHTML = '';
-        
+
         if (products.length === 0) {
             grid.innerHTML = '<p style="text-align:center; color:#94a3b8; grid-column: 1/-1;">目前沒有這位成員的可售商品喔！</p>';
             return;
@@ -100,11 +100,12 @@ async function searchProducts() {
         products.forEach(p => {
             const card = document.createElement('div');
             card.className = 'product-card';
-            
-            const imgHTML = p.ImageUrl 
-                ? `<div style="width:100%; height:200px; border-radius:8px; overflow:hidden; margin-bottom:15px;"><img src="${p.ImageUrl}" style="width:100%; height:100%; object-fit:cover;"></div>`
+
+            const imgUrl = p.ImageUrl ? (p.ImageUrl.startsWith('http') ? p.ImageUrl : `${API_BASE}/uploads/${p.ImageUrl.split('/').pop()}`) : null;
+            const imgHTML = imgUrl
+                ? `<div style="width:100%; height:200px; border-radius:8px; overflow:hidden; margin-bottom:15px;"><img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover;"></div>`
                 : `<div style="width:100%; height:200px; border-radius:8px; background:rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:3rem; margin-bottom:15px;"><i class="fa-regular fa-image"></i></div>`;
-                
+
             const groupsText = (p.GroupNames && p.GroupNames.length > 0) ? p.GroupNames.join(', ') : '群星周邊';
             const membersText = (p.MemberNames && p.MemberNames.length > 0) ? p.MemberNames.join(', ') : '成員不詳';
 
@@ -151,7 +152,7 @@ window.onclick = (e) => {
 // 確認結帳 (展示悲觀鎖機制)
 document.getElementById('confirm-buy-btn').addEventListener('click', async () => {
     if (!currentSelectedProductId) return;
-    
+
     const btn = document.getElementById('confirm-buy-btn');
     btn.innerText = '處理中...';
     btn.disabled = true;
@@ -188,35 +189,35 @@ document.getElementById('confirm-buy-btn').addEventListener('click', async () =>
 
 // 分頁切換邏輯
 function switchTab(event, tabId) {
-    if(event) event.preventDefault();
+    if (event) event.preventDefault();
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.getElementById(`tab-${tabId}`).style.display = 'block';
-    
-    if(event) {
+
+    if (event) {
         document.querySelectorAll('nav a').forEach(el => el.classList.remove('active'));
         event.currentTarget.classList.add('active');
     }
 
-    if(tabId === 'wishlist') loadWishlists();
-    if(tabId === 'orders') loadOrders();
-    if(tabId === 'profile') loadProfile();
+    if (tabId === 'wishlist') loadWishlists();
+    if (tabId === 'orders') loadOrders();
+    if (tabId === 'profile') loadProfile();
 }
 
 // 個人資訊載入
 async function loadProfile() {
     try {
-                        const res = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}`); // 假設登入的是 User 1
+        const res = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}`); // 假設登入的是 User 1
         const user = await res.json();
-        
+
         const soldRes = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/sold_products`);
         const soldProducts = await soldRes.json();
-        
+
         const boughtRes = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/bought_orders`);
         const boughtOrders = await boughtRes.json();
 
         const notifRes = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/notifications`);
         const notifications = await notifRes.json();
-        
+
         let soldHTML = soldProducts.map(p => `<li>精選周邊 #${p.ProductID} (NT$ ${p.Price}) - 狀態: ${p.Status}</li>`).join('');
         let boughtHTML = boughtOrders.map(o => `<li>訂單 #${o.OrderID} (商品 #${o.ProductID}, NT$ ${o.OrderPrice}) - 狀態: ${o.Status}</li>`).join('');
         let notifHTML = notifications.map(n => `<li style="margin-bottom:8px; border-bottom: 1px solid #eee; padding-bottom: 5px;"><strong>User ${n.SenderID}</strong> (商品 #${n.ProductID}): ${n.Content.substring(0, 30)}${n.MediaUrl ? ' [附帶多媒體檔案]' : ''}</li>`).join('');
@@ -243,7 +244,7 @@ async function loadProfile() {
                 ${boughtHTML || '<li>目前沒有買入紀錄</li>'}
             </ul>
         `;
-    } catch(err) { console.error('Failed to load profile', err); }
+    } catch (err) { console.error('Failed to load profile', err); }
 }
 
 let currentSearchProducts = [];
@@ -251,7 +252,7 @@ let currentSearchProducts = [];
 function openProductModal(id) {
     const p = currentSearchProducts.find(prod => prod.ProductID === id);
     if (!p) return;
-    
+
     const groupsText = (p.GroupNames && p.GroupNames.length > 0) ? p.GroupNames.join(', ') : '群星周邊';
     const membersText = (p.MemberNames && p.MemberNames.length > 0) ? p.MemberNames.join(', ') : '成員不詳';
 
@@ -262,33 +263,33 @@ function openProductModal(id) {
     document.getElementById('detail-method').innerText = p.TradeMethod;
     document.getElementById('detail-seller-id').innerText = p.SellerID;
     document.getElementById('detail-seller-rep').innerText = '載入中...';
-    
+
     const imgEl = document.getElementById('detail-image');
     const iconEl = document.getElementById('detail-image-icon');
-    
+
     if (p.ImageUrl) {
-        imgEl.src = p.ImageUrl;
+        imgEl.src = p.ImageUrl.startsWith('http') ? p.ImageUrl : `${API_BASE}/uploads/${p.ImageUrl.split('/').pop()}`;
         imgEl.style.display = 'block';
         iconEl.style.display = 'none';
     } else {
         imgEl.style.display = 'none';
         iconEl.style.display = 'block';
     }
-    
-    currentSelectedProductId = id; 
-    
+
+    currentSelectedProductId = id;
+
     document.getElementById('detail-buy-btn').onclick = () => {
         document.getElementById('product-modal').classList.remove('show');
-        openBuyModal(id, price);
+        openBuyModal(id, p.Price);
     };
-    
+
     document.getElementById('detail-chat-btn').onclick = () => {
         document.getElementById('product-modal').classList.remove('show');
         openChatModal(id, p.SellerID);
     };
 
     document.getElementById('product-modal').classList.add('show');
-    
+
     fetch(`${API_BASE}/users/${p.SellerID}/reputation`)
         .then(r => r.json())
         .then(data => {
@@ -302,27 +303,27 @@ async function addWishlist() {
     const memberName = document.getElementById('wish-member-input').value.trim();
     const groupName = document.getElementById('wish-group-input').value.trim();
     const price = document.getElementById('wish-price').value;
-    if(!price || !memberName) return alert('請輸入成員名稱與最高預算！');
+    if (!price || !memberName) return alert('請輸入成員名稱與最高預算！');
 
     try {
         const res = await fetch(`${API_BASE}/wishlists/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                UserID: CURRENT_USER_ID, 
+            body: JSON.stringify({
+                UserID: CURRENT_USER_ID,
                 MaxPrice: parseFloat(price),
                 CustomGroupName: groupName || "Unknown Group",
                 CustomMemberName: memberName
-            }) 
+            })
         });
-        if(res.ok) {
+        if (res.ok) {
             alert('願望新增成功！如果有賣家上架，系統會自動比對喔！');
             document.getElementById('wish-price').value = '';
             loadWishlists();
         } else {
             alert('新增失敗');
         }
-    } catch(err) { alert('伺服器連線錯誤'); }
+    } catch (err) { alert('伺服器連線錯誤'); }
 }
 
 async function loadWishlists() {
@@ -337,7 +338,7 @@ async function loadWishlists() {
                 <div class="price">預算: NT$ ${w.MaxPrice}</div>
             </div>
         `).join('') : '<p style="color: var(--text-muted);">目前沒有願望清單</p>';
-    } catch(err) { console.error(err); }
+    } catch (err) { console.error(err); }
 }
 
 // 我的訂單
@@ -356,7 +357,7 @@ async function loadOrders() {
                 ${o.Status === 'Completed' ? `<button onclick="openReviewModal(${o.OrderID})" class="btn-primary" style="width:100%; margin-top:15px; padding: 10px; font-size: 0.9rem;">給予賣家評價</button>` : ''}
             </div>
         `).join('') : '<p style="color: var(--text-muted);">目前沒有訂單紀錄</p>';
-    } catch(err) { console.error(err); }
+    } catch (err) { console.error(err); }
 }
 
 let currentReviewOrderId = null;
@@ -367,13 +368,13 @@ function openReviewModal(orderId) {
 }
 
 async function submitReview() {
-    if(!currentReviewOrderId) return;
-    
+    if (!currentReviewOrderId) return;
+
     const packing = parseInt(document.getElementById('review-packing').value);
     const video = parseInt(document.getElementById('review-video').value);
     const speed = parseInt(document.getElementById('review-speed').value);
     const comment = document.getElementById('review-comment').value;
-    
+
     try {
         const res = await fetch(`${API_BASE}/reviews/`, {
             method: 'POST',
@@ -386,8 +387,8 @@ async function submitReview() {
                 Comment: comment
             })
         });
-        
-        if(res.ok) {
+
+        if (res.ok) {
             alert('評價送出成功！已動態更新賣家信譽！');
             document.getElementById('review-modal').classList.remove('show');
             loadUserReputation(CURRENT_USER_ID); // 重新載入信譽
@@ -395,7 +396,7 @@ async function submitReview() {
             const err = await res.json();
             alert(`評價失敗: ${err.detail || '您可能已經評價過這筆訂單'}`);
         }
-    } catch(err) { alert('伺服器連線錯誤'); }
+    } catch (err) { alert('伺服器連線錯誤'); }
 }
 
 // 上架商品
@@ -408,10 +409,10 @@ async function sellProduct() {
     const method = document.getElementById('sell-method').value;
     const imageInput = document.getElementById('sell-image');
 
-    if(!price || !productName || !groupName || !memberNamesStr) return alert('請填寫完整商品資訊！');
-    
+    if (!price || !productName || !groupName || !memberNamesStr) return alert('請填寫完整商品資訊！');
+
     let imageUrl = null;
-    if(imageInput.files.length > 0) {
+    if (imageInput.files.length > 0) {
         const formData = new FormData();
         formData.append("file", imageInput.files[0]);
         try {
@@ -419,17 +420,17 @@ async function sellProduct() {
                 method: 'POST',
                 body: formData
             });
-            if(uploadRes.ok) {
+            if (uploadRes.ok) {
                 const uploadData = await uploadRes.json();
                 imageUrl = uploadData.ImageUrl;
             } else {
                 alert("圖片上傳失敗，商品將不含圖片");
             }
-        } catch(e) {
+        } catch (e) {
             console.error("圖片上傳發生錯誤", e);
         }
     }
-    
+
     const memberNames = memberNamesStr.split(',').map(s => s.trim()).filter(s => s);
 
     try {
@@ -448,21 +449,21 @@ async function sellProduct() {
                 ImageUrl: imageUrl
             })
         });
-        if(res.ok) {
+        if (res.ok) {
             alert('🎉 商品上架成功！系統已開始為您進行自動撮合！');
             document.getElementById('sell-price').value = '';
             document.getElementById('sell-name').value = '';
             document.getElementById('sell-desc').value = '';
             document.getElementById('sell-group-name').value = '';
             document.getElementById('sell-member-names').value = '';
-            if(imageInput) imageInput.value = '';
+            if (imageInput) imageInput.value = '';
             // 自動跳轉回首頁看結果
             document.querySelector('nav a:nth-child(1)').click();
             searchProducts();
         } else {
             alert('上架失敗');
         }
-    } catch(err) { alert('伺服器連線錯誤'); }
+    } catch (err) { alert('伺服器連線錯誤'); }
 }
 
 // ===============================
@@ -475,7 +476,7 @@ let currentChatMessages = [];
 function openChatModal(productId, sellerId) {
     currentChatProductId = productId;
     currentChatSellerId = sellerId;
-    
+
     // 動態修改標題
     const titleEl = document.querySelector('#chat-modal h2');
     if (CURRENT_USER_ID === sellerId) {
@@ -483,26 +484,27 @@ function openChatModal(productId, sellerId) {
     } else {
         titleEl.innerHTML = '<i class="fa-regular fa-comments"></i> 聯絡賣家';
     }
-    
+
     document.getElementById('chat-modal').classList.add('show');
     loadMessages();
 }
 
 async function loadMessages() {
-    if(!currentChatProductId) return;
+    if (!currentChatProductId) return;
     const msgContainer = document.getElementById('chat-messages');
     try {
         const res = await fetch(`${API_BASE}/products/${currentChatProductId}/messages`);
         const msgs = await res.json();
         currentChatMessages = msgs;
-        
-                msgContainer.innerHTML = msgs.length ? msgs.map(m => {
+
+        msgContainer.innerHTML = msgs.length ? msgs.map(m => {
             let mediaHTML = '';
-            if(m.MediaUrl) {
-                if(m.MediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
-                    mediaHTML = `<video src="${m.MediaUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 10px;"></video>`;
+            if (m.MediaUrl) {
+                const fullMediaUrl = m.MediaUrl.startsWith('http') ? m.MediaUrl : `${API_BASE}/uploads/${m.MediaUrl.split('/').pop()}`;
+                if (m.MediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
+                    mediaHTML = `<video src="${fullMediaUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 10px;"></video>`;
                 } else {
-                    mediaHTML = `<img src="${m.MediaUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
+                    mediaHTML = `<img src="${fullMediaUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
                 }
             }
             return `
@@ -516,20 +518,20 @@ async function loadMessages() {
             `;
         }).join('') : '<p style="text-align: center; color: var(--text-muted); margin-top: 50px;">還沒有留言，來打個招呼吧！</p>';
         msgContainer.scrollTop = msgContainer.scrollHeight;
-    } catch(err) { console.error('Failed to load messages', err); }
+    } catch (err) { console.error('Failed to load messages', err); }
 }
 
 document.getElementById('chat-send-btn').addEventListener('click', async () => {
     const input = document.getElementById('chat-input');
     const fileInput = document.getElementById('chat-file-input');
     const content = input.value.trim();
-    
+
     // 如果沒有文字 也沒有檔案 就不要送出
-    if(!content && fileInput.files.length === 0) return;
-    if(!currentChatProductId) return;
-    
+    if (!content && fileInput.files.length === 0) return;
+    if (!currentChatProductId) return;
+
     const senderId = CURRENT_USER_ID;
-    let receiverId = currentChatSellerId; 
+    let receiverId = currentChatSellerId;
 
     if (senderId === currentChatSellerId) {
         const lastBuyerMsg = currentChatMessages.slice().reverse().find(m => m.SenderID !== currentChatSellerId);
@@ -543,7 +545,7 @@ document.getElementById('chat-send-btn').addEventListener('click', async () => {
 
     // 處理檔案上傳
     let mediaUrl = null;
-    if(fileInput.files.length > 0) {
+    if (fileInput.files.length > 0) {
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         try {
@@ -551,11 +553,11 @@ document.getElementById('chat-send-btn').addEventListener('click', async () => {
                 method: 'POST',
                 body: formData
             });
-            if(uploadRes.ok) {
+            if (uploadRes.ok) {
                 const uploadData = await uploadRes.json();
                 mediaUrl = uploadData.filename;
             }
-        } catch(err) { console.error("Upload failed", err); }
+        } catch (err) { console.error("Upload failed", err); }
     }
 
     try {
@@ -570,10 +572,10 @@ document.getElementById('chat-send-btn').addEventListener('click', async () => {
                 MediaUrl: mediaUrl
             })
         });
-        if(res.ok) {
+        if (res.ok) {
             input.value = '';
             fileInput.value = ''; // 清除檔案
             loadMessages();
         }
-    } catch(err) { console.error('Send message failed', err); }
+    } catch (err) { console.error('Send message failed', err); }
 });
