@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, DECIMAL, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -89,3 +89,20 @@ class Message(Base):
     product = relationship("Product")
     sender = relationship("User", foreign_keys=[SenderID])
     receiver = relationship("User", foreign_keys=[ReceiverID])
+
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey("Product.ProductID", ondelete="CASCADE"), nullable=False)
+    buyer_id = Column(Integer, ForeignKey("User.UserID"), nullable=False)
+    seller_id = Column(Integer, ForeignKey("User.UserID"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+class ChatMessage(Base):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("User.UserID"), nullable=False)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

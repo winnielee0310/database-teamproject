@@ -27,6 +27,26 @@ app.add_middleware(
 # ===============================
 # 1. 使用者與信譽模組 (User & Reputation)
 # ===============================
+@app.post("/auth/register", response_model=schemas.AuthResponse, tags=["Auth"])
+def auth_register(user: schemas.UserRegister, db: Session = Depends(get_db)):
+    # 此處密碼先用明文儲存，方便課堂專題測試。正式環境應使用雜湊加密 (如 bcrypt)
+    existing_user_email = db.query(models.User).filter(models.User.Email == user.email).first()
+    if existing_user_email:
+        raise HTTPException(status_code=400, detail="Email already exists")
+        
+    db_user = models.User(Account=user.username, Password=user.password, Email=user.email)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return schemas.AuthResponse(id=db_user.UserID, username=db_user.Account, email=db_user.Email)
+
+@app.post("/auth/login", response_model=schemas.AuthResponse, tags=["Auth"])
+def auth_login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.Email == user.email, models.User.Password == user.password).first()
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return schemas.AuthResponse(id=db_user.UserID, username=db_user.Account, email=db_user.Email)
+
 @app.post("/users/", response_model=schemas.UserResponse, tags=["Users"])
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = models.User(Account=user.Account, Password=user.Password, Email=user.Email)
@@ -296,3 +316,78 @@ def get_product_messages(product_id: int, db: Session = Depends(get_db)):
 @app.get("/", tags=["Root"])
 def read_root():
     return {"message": "Welcome to Idol Merchandise Trading API"}
+
+# ===============================
+# 7. 對話聊天室系統模組 (Chat System)
+# ===============================
+
+@app.post("/chats/create", response_model=schemas.ChatResponse, tags=["Chats"])
+def create_chat(chat_data: schemas.ChatCreate, db: Session = Depends(get_db)):
+    existing_chat = db.query(models.Chat).filter(
+        models.Chat.product_id == chat_data.product_id,
+        models.Chat.buyer_id == chat_data.buyer_id,
+        models.Chat.seller_id == chat_data.seller_id
+    ).first()
+    if existing_chat:
+        return {"chat_id": existing_chat.id}
+        
+    db_chat = models.Chat(product_id=chat_data.product_id, buyer_id=chat_data.buyer_id, seller_id=chat_data.seller_id)
+    db.add(db_chat)
+    db.commit()
+    db.refresh(db_chat)
+    return {"chat_id": db_chat.id}
+
+@app.post("/messages/send", tags=["Chats"])
+def send_chat_message(msg_data: schemas.ChatMessageCreate, db: Session = Depends(get_db)):
+    db_msg = models.ChatMessage(**msg_data.model_dump())
+    db.add(db_msg)
+    db.commit()
+    return {"status": "success"}
+
+@app.post("/chats/{chat_id}/read", tags=["Chats"])
+def mark_chat_messages_as_read(chat_id: int, user_id: int, db: Session = Depends(get_db)):
+    # 將對方發送的未讀訊息變更為已讀
+    db.query(models.ChatMessage).filter(
+        models.ChatMessage.chat_id == chat_id,
+        models.ChatMessage.sender_id != user_id,
+        models.ChatMessage.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/messages/{chat_id}", response_model=List[schemas.ChatMessageResponse], tags=["Chats"])
+def get_chat_messages(chat_id: int, db: Session = Depends(get_db)):
+    return db.query(models.ChatMessage).filter(models.ChatMessage.chat_id == chat_id).order_by(models.ChatMessage.created_at).all()
+
+@app.get("/users/{user_id}/chats", response_model=List[schemas.ChatListResponse], tags=["Chats"])
+def get_user_chats(user_id: int, db: Session = Depends(get_db)):
+    chats = db.query(models.Chat).filter(
+        (models.Chat.buyer_id == user_id) | (models.Chat.seller_id == user_id)
+    ).all()
+    
+    result = []
+    for chat in chats:
+        product = db.query(models.Product).filter(models.Product.ProductID == chat.product_id).first()
+        product_name = product.ProductName if product else "Unknown Product"
+        
+        last_msg = db.query(models.ChatMessage).filter(models.ChatMessage.chat_id == chat.id).order_by(models.ChatMessage.created_at.desc()).first()
+        last_message_text = last_msg.message if last_msg else ""
+        updated_at = last_msg.created_at if last_msg else chat.created_at
+        
+        unread_count = db.query(models.ChatMessage).filter(
+            models.ChatMessage.chat_id == chat.id,
+            models.ChatMessage.sender_id != user_id,
+            models.ChatMessage.is_read == False
+        ).count()
+        
+        result.append({
+            "chat_id": chat.id,
+            "product_name": product_name,
+            "last_message": last_message_text,
+            "updated_at": updated_at,
+            "unread_count": unread_count
+        })
+    
+    # Sort by updated_at descending
+    result.sort(key=lambda x: x["updated_at"], reverse=True)
+    return result

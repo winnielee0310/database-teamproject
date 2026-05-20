@@ -16,131 +16,186 @@
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
 
-    <header class="glass-header">
-        <div class="logo">
-            <i class="fa-solid fa-star"></i> Idol Trade
-        </div>
-        <nav>
-            <a href="#" class="active" onclick="switchTab(event, 'home')">首頁 (Home)</a>
-            <a href="#" onclick="switchTab(event, 'wishlist')">願望清單 (Wishlist)</a>
-            <a href="#" onclick="switchTab(event, 'orders')">我的訂單 (Orders)</a>
-            <a href="#" onclick="switchTab(event, 'sell')">上架商品 (Sell)</a>
-            <a href="#" onclick="switchTab(event, 'profile')">個人資訊 (Profile)</a>
-        </nav>
-        <div class="user-profile" style="display: flex; gap: 10px; align-items: center;">
-            <select id="user-selector" onchange="switchUser()"
-                style="padding: 8px 12px; border-radius: 20px; border: 1px solid var(--primary); background: rgba(255,255,255,0.7); color: var(--primary); font-weight: bold; cursor: pointer; outline: none;">
-                <option value="1">切換: User 1 (賣家Alice)</option>
-                <option value="2">切換: User 2 (買家Bob)</option>
-            </select>
-            <img src="https://ui-avatars.com/api/?name=Winnie&background=f472b6&color=fff" alt="User">
-            <span id="reputation-badge" class="reputation">信用載入中...</span>
-        </div>
-    </header>
-
-    <main class="container">
-        <!-- 首頁區塊 -->
-        <div id="tab-home" class="tab-content active">
-            <section class="hero glass-panel">
-                <h1>尋找您的<span class="gradient-text">命定周邊</span></h1>
-                <p>透過最先進的「多成員關聯搜尋」與「願望自動撮合」尋找稀有小卡</p>
-                <div class="search-bar" style="flex-wrap: wrap; gap: 10px;">
-                    <input type="text" id="group-search-input" list="popular-groups" placeholder="團體名稱 (選填)"
-                        style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
-                    <input type="text" id="member-search-input" list="popular-members" placeholder="輸入成員名稱"
-                        style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
-                    <button id="search-btn" class="btn-primary" onclick="searchProducts()">
-                        <i class="fa-solid fa-magnifying-glass"></i> 搜尋周邊
-                    </button>
-                </div>
-            </section>
-            <section class="product-section">
-                <div class="section-title">
-                    <h2>搜尋結果 <span id="result-count">(0)</span></h2>
-                </div>
-                <div id="product-grid" class="product-grid">
-                    <!-- JavaScript 將動態渲染商品卡片於此 -->
-                </div>
-            </section>
+    <!-- Login / Registration Container -->
+    <div id="auth-container" class="container"
+        style="display: flex; justify-content: center; align-items: center; min-height: 80vh; flex-direction: column; gap: 20px;">
+        <div id="login-box" class="glass-panel"
+            style="padding: 2rem; width: 100%; max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom: 1.5rem; color: var(--primary);">會員登入</h2>
+            <div id="login-error" style="color: #e11d48; margin-bottom: 1rem; display: none;"></div>
+            <input type="email" id="login-email" placeholder="Email"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.8); outline: none;">
+            <input type="password" id="login-password" placeholder="密碼"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.8); outline: none;">
+            <button onclick="handleLogin()" class="btn-primary" style="width: 100%; margin-bottom: 15px;">登入</button>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">還沒有帳號嗎？ <a href="#" onclick="showRegisterPage()"
+                    style="color: var(--primary); font-weight: bold;">註冊新帳號</a></p>
         </div>
 
-        <!-- 願望清單區塊 -->
-        <div id="tab-wishlist" class="tab-content" style="display: none;">
-            <section class="hero glass-panel">
-                <h2><i class="fa-solid fa-heart" style="color: var(--secondary);"></i> 新增願望清單</h2>
-                <p>設定目標成員與預算，系統自動為您撮合新上架的周邊！</p>
-                <div class="search-bar" style="margin-top: 1rem; flex-wrap: wrap; gap: 10px;">
-                    <input type="text" id="wish-group-input" list="popular-groups" placeholder="團體名稱 (選填)"
-                        style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
-                    <input type="text" id="wish-member-input" list="popular-members" placeholder="成員名稱"
-                        style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
-                    <input type="number" id="wish-price" placeholder="最高預算 (NT$)"
-                        style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
-                    <button onclick="addWishlist()" class="btn-primary">新增願望</button>
-                </div>
-            </section>
-            <section class="product-section">
-                <div class="section-title">
-                    <h2>我的願望清單</h2>
-                </div>
-                <div id="wishlist-grid" class="product-grid"></div>
-            </section>
+        <div id="register-box" class="glass-panel"
+            style="padding: 2rem; width: 100%; max-width: 400px; text-align: center; display: none;">
+            <h2 style="margin-bottom: 1.5rem; color: var(--secondary);">註冊新帳號</h2>
+            <div id="register-error" style="color: #e11d48; margin-bottom: 1rem; display: none;"></div>
+            <input type="text" id="reg-username" placeholder="使用者名稱"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.8); outline: none;">
+            <input type="email" id="reg-email" placeholder="Email"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.8); outline: none;">
+            <input type="password" id="reg-password" placeholder="密碼"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.8); outline: none;">
+            <input type="password" id="reg-password-confirm" placeholder="確認密碼"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.8); outline: none;">
+            <button onclick="handleRegister()" class="btn-primary"
+                style="width: 100%; margin-bottom: 15px; background: linear-gradient(to right, var(--secondary), #f43f5e);">註冊</button>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">已經有帳號了？ <a href="#" onclick="showLoginPage()"
+                    style="color: var(--primary); font-weight: bold;">返回登入</a></p>
         </div>
+    </div>
 
-        <!-- 我的訂單區塊 -->
-        <div id="tab-orders" class="tab-content" style="display: none;">
-            <section class="product-section">
-                <div class="section-title">
-                    <h2><i class="fa-solid fa-box-open" style="color: var(--secondary);"></i> 購買訂單紀錄</h2>
-                </div>
-                <div id="orders-grid" class="product-grid"></div>
-            </section>
-        </div>
+    <div id="main-app" style="display: none;">
+        <header class="glass-header">
+            <div class="logo">
+                <i class="fa-solid fa-star"></i> Idol Trade
+            </div>
+            <nav>
+                <a href="#" class="active" onclick="switchTab(event, 'home')">首頁 (Home)</a>
+                <a href="#" onclick="switchTab(event, 'wishlist')">願望清單 (Wishlist)</a>
+                <a href="#" onclick="switchTab(event, 'orders')">我的訂單 (Orders)</a>
+                <a href="#" onclick="switchTab(event, 'sell')">上架商品 (Sell)</a>
+                <a href="#" onclick="switchTab(event, 'messages')" style="position: relative;">
+                    聊天室 (Messages)
+                    <span id="nav-unread-badge" class="nav-badge" style="display: none;">0</span>
+                </a>
+                <a href="#" onclick="switchTab(event, 'profile')">個人資訊 (Profile)</a>
+            </nav>
+            <div class="user-profile" style="display: flex; gap: 10px; align-items: center;">
+                <span id="current-username-display" style="color: var(--primary); font-weight: bold;">User</span>
+                <button onclick="handleLogout()" class="btn-primary"
+                    style="padding: 6px 12px; font-size: 0.8rem; background: var(--text-muted);">登出</button>
+                <img src="https://ui-avatars.com/api/?name=User&background=f472b6&color=fff" alt="User"
+                    id="user-avatar">
+                <span id="reputation-badge" class="reputation">信用載入中...</span>
+            </div>
+        </header>
 
-        <!-- 上架商品區塊 -->
-        <div id="tab-sell" class="tab-content" style="display: none;">
-            <section class="hero glass-panel">
-                <h2><i class="fa-solid fa-store" style="color: var(--secondary);"></i> 上架個人周邊</h2>
-                <p>將重複的周邊上架，系統會自動通知有設定願望清單的買家</p>
-                <div
-                    style="display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 2rem auto 0 auto; text-align: left;">
-                    <label style="color: var(--text-muted); font-weight: 600;">團體名稱 (自行填寫)</label>
-                    <input type="text" id="sell-group-name" placeholder="例如: NewJeans"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                    <label style="color: var(--text-muted); font-weight: 600;">成員名稱 (可多人，請用逗號分隔，處理 N:M 關聯)</label>
-                    <input type="text" id="sell-member-names" placeholder="例如: Minji, Hanni"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                    <input type="text" id="sell-name" placeholder="商品名稱"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                    <input type="number" id="sell-price" placeholder="售價 (NT$)"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                    <input type="text" id="sell-desc" placeholder="商品描述 / 卡況 (例如: 9成新、有廠損)"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                    <label style="color: var(--text-muted); font-weight: 600;">商品照片上傳</label>
-                    <input type="file" id="sell-image" accept="image/*"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                    <select id="sell-method"
-                        style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
-                        <option value="賣貨便">賣貨便</option>
-                        <option value="面交">面交</option>
-                        <option value="郵寄">郵寄</option>
-                    </select>
-                    <button onclick="sellProduct()" class="btn-primary" style="margin-top: 10px;">確認上架</button>
-                </div>
-            </section>
-        </div>
+        <main class="container">
+            <!-- 首頁區塊 -->
+            <div id="tab-home" class="tab-content active">
+                <section class="hero glass-panel">
+                    <h1>尋找您的<span class="gradient-text">命定周邊</span></h1>
+                    <p>透過最先進的「多成員關聯搜尋」與「願望自動撮合」尋找稀有小卡</p>
+                    <div class="search-bar" style="flex-wrap: wrap; gap: 10px;">
+                        <input type="text" id="group-search-input" list="popular-groups" placeholder="團體名稱 (選填)"
+                            style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
+                        <input type="text" id="member-search-input" list="popular-members" placeholder="輸入成員名稱"
+                            style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
+                        <button id="search-btn" class="btn-primary" onclick="searchProducts()">
+                            <i class="fa-solid fa-magnifying-glass"></i> 搜尋周邊
+                        </button>
+                    </div>
+                </section>
+                <section class="product-section">
+                    <div class="section-title">
+                        <h2>搜尋結果 <span id="result-count">(0)</span></h2>
+                    </div>
+                    <div id="product-grid" class="product-grid">
+                        <!-- JavaScript 將動態渲染商品卡片於此 -->
+                    </div>
+                </section>
+            </div>
 
-        <!-- 個人資訊區塊 -->
-        <div id="tab-profile" class="tab-content" style="display: none;">
-            <section class="hero glass-panel">
-                <h2><i class="fa-solid fa-user" style="color: var(--secondary);"></i> 我的個人檔案</h2>
-                <div id="profile-container"
-                    style="margin-top: 2rem; text-align: left; max-width: 400px; margin-inline: auto; font-size: 1.1rem; line-height: 1.8;">
-                    <!-- JavaScript 將動態渲染個人資訊於此 -->
-                </div>
-            </section>
-        </div>
-    </main>
+            <!-- 願望清單區塊 -->
+            <div id="tab-wishlist" class="tab-content" style="display: none;">
+                <section class="hero glass-panel">
+                    <h2><i class="fa-solid fa-heart" style="color: var(--secondary);"></i> 新增願望清單</h2>
+                    <p>設定目標成員與預算，系統自動為您撮合新上架的周邊！</p>
+                    <div class="search-bar" style="margin-top: 1rem; flex-wrap: wrap; gap: 10px;">
+                        <input type="text" id="wish-group-input" list="popular-groups" placeholder="團體名稱 (選填)"
+                            style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
+                        <input type="text" id="wish-member-input" list="popular-members" placeholder="成員名稱"
+                            style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
+                        <input type="number" id="wish-price" placeholder="最高預算 (NT$)"
+                            style="padding: 12px 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); flex: 1; outline: none; color: var(--text-main);">
+                        <button onclick="addWishlist()" class="btn-primary">新增願望</button>
+                    </div>
+                </section>
+                <section class="product-section">
+                    <div class="section-title">
+                        <h2>我的願望清單</h2>
+                    </div>
+                    <div id="wishlist-grid" class="product-grid"></div>
+                </section>
+            </div>
+
+            <!-- 我的訂單區塊 -->
+            <div id="tab-orders" class="tab-content" style="display: none;">
+                <section class="product-section">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-box-open" style="color: var(--secondary);"></i> 購買訂單紀錄</h2>
+                    </div>
+                    <div id="orders-grid" class="product-grid"></div>
+                </section>
+            </div>
+
+            <!-- 上架商品區塊 -->
+            <div id="tab-sell" class="tab-content" style="display: none;">
+                <section class="hero glass-panel">
+                    <h2><i class="fa-solid fa-store" style="color: var(--secondary);"></i> 上架個人周邊</h2>
+                    <p>將重複的周邊上架，系統會自動通知有設定願望清單的買家</p>
+                    <div
+                        style="display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 2rem auto 0 auto; text-align: left;">
+                        <label style="color: var(--text-muted); font-weight: 600;">團體名稱 (自行填寫)</label>
+                        <input type="text" id="sell-group-name" placeholder="例如: NewJeans"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                        <label style="color: var(--text-muted); font-weight: 600;">成員名稱 (可多人，請用逗號分隔，處理 N:M 關聯)</label>
+                        <input type="text" id="sell-member-names" placeholder="例如: Minji, Hanni"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                        <input type="text" id="sell-name" placeholder="商品名稱"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                        <input type="number" id="sell-price" placeholder="售價 (NT$)"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                        <input type="text" id="sell-desc" placeholder="商品描述 / 卡況 (例如: 9成新、有廠損)"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                        <label style="color: var(--text-muted); font-weight: 600;">商品照片上傳</label>
+                        <input type="file" id="sell-image" accept="image/*"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                        <select id="sell-method"
+                            style="padding: 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.8); outline: none; color: var(--text-main);">
+                            <option value="賣貨便">賣貨便</option>
+                            <option value="面交">面交</option>
+                            <option value="郵寄">郵寄</option>
+                        </select>
+                        <button onclick="sellProduct()" class="btn-primary" style="margin-top: 10px;">確認上架</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 聊天室專區 (Messages) -->
+            <div id="tab-messages" class="tab-content" style="display: none;">
+                <section class="hero glass-panel">
+                    <h2><i class="fa-solid fa-comments" style="color: var(--primary);"></i> 聊天室</h2>
+                    <p>管理您的所有買賣對話與溝通</p>
+                    <div id="messages-container"
+                        style="margin-top: 2rem; max-width: 600px; margin-inline: auto; text-align: left;">
+                        <!-- JS 動態載入聊天清單 -->
+                        <ul id="messages-list" style="padding: 0; list-style-type: none;">
+                            <li style="text-align: center; color: var(--text-muted);">載入中...</li>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 個人資訊區塊 -->
+            <div id="tab-profile" class="tab-content" style="display: none;">
+                <section class="hero glass-panel">
+                    <h2><i class="fa-solid fa-user" style="color: var(--secondary);"></i> 我的個人檔案</h2>
+                    <div id="profile-container"
+                        style="margin-top: 2rem; text-align: left; max-width: 400px; margin-inline: auto; font-size: 1.1rem; line-height: 1.8;">
+                        <!-- JavaScript 將動態渲染個人資訊於此 -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
 
     <!-- 購買確認彈窗 -->
     <div id="buy-modal" class="modal">
@@ -233,24 +288,22 @@
 
     <!-- Chat Modal -->
     <div class="modal" id="chat-modal">
-        <div class="modal-content" style="max-width: 500px; display: flex; flex-direction: column; height: 60vh;">
-            <span class="close-btn"
-                onclick="document.getElementById('chat-modal').classList.remove('show')">&times;</span>
-            <h2 style="margin-bottom: 15px; text-align: center;"><i class="fa-regular fa-comments"></i> 聯絡賣家</h2>
+        <div class="modal-content glass-panel"
+            style="max-width: 500px; display: flex; flex-direction: column; height: 70vh;">
+            <span class="close-btn" onclick="closeChatModal()">&times;</span>
+            <h2 id="chat-title" style="margin-bottom: 15px; text-align: center; color: var(--primary);"><i
+                    class="fa-regular fa-comments"></i> 聊天室</h2>
 
             <div id="chat-messages"
-                style="flex: 1; overflow-y: auto; background: var(--bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;">
+                style="flex: 1; overflow-y: auto; background: rgba(255,255,255,0.4); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--glass-border);">
                 <!-- Messages go here -->
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center;">
-                <label for="chat-file-input" style="cursor: pointer; color: var(--primary); font-size: 1.5rem;">
-                    <i class="fa-solid fa-paperclip"></i>
-                </label>
-                <input type="file" id="chat-file-input" accept="image/*,video/*" style="display: none;">
                 <input type="text" id="chat-input" placeholder="輸入訊息..."
-                    style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                <button class="btn-primary" id="chat-send-btn" style="width: 60px;"><i
+                    style="flex: 1; padding: 12px; border: 1px solid var(--glass-border); border-radius: 12px; outline: none; background: rgba(255,255,255,0.8);">
+                <button class="btn-primary" id="chat-send-btn"
+                    style="width: 60px; padding: 12px; border-radius: 12px;"><i
                         class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
