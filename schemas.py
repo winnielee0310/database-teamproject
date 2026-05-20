@@ -4,6 +4,22 @@ from datetime import datetime
 from datetime import datetime
 
 # --- User ---
+class UserRegister(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class AuthResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    class Config:
+        from_attributes = True
+
 class UserCreate(BaseModel):
     Account: str
     Password: str
@@ -125,5 +141,38 @@ class MessageResponse(BaseModel):
     Content: str
     SentAt: datetime
     MediaUrl: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+# --- Chat System ---
+class ChatCreate(BaseModel):
+    product_id: int
+    buyer_id: int
+    seller_id: int
+
+class ChatResponse(BaseModel):
+    chat_id: int
+    class Config:
+        from_attributes = True
+
+class ChatMessageCreate(BaseModel):
+    chat_id: int
+    sender_id: int
+    message: str
+
+class ChatMessageResponse(BaseModel):
+    id: int
+    sender_id: int
+    message: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class ChatListResponse(BaseModel):
+    chat_id: int
+    product_name: str
+    last_message: str
+    updated_at: datetime
+    unread_count: int
     class Config:
         from_attributes = True

@@ -1,22 +1,178 @@
 const API_BASE = "http://127.0.0.1:8001";
 let CURRENT_USER_ID = 1;
+let currentSelectedProductId = null;
+let unreadPollingInterval = null;
 
-function switchUser() {
-    CURRENT_USER_ID = parseInt(document.getElementById('user-selector').value);
-    loadUserReputation(CURRENT_USER_ID);
-    if (document.getElementById('tab-profile').style.display === 'block') loadProfile();
-    if (document.getElementById('tab-orders').style.display === 'block') loadOrders();
-    if (document.getElementById('tab-wishlist').style.display === 'block') loadWishlists();
+// --- Auth Logic ---
+function showLoginPage() {
+    document.getElementById('login-box').style.display = 'block';
+    document.getElementById('register-box').style.display = 'none';
 }
 
-let currentSelectedProductId = null;
+function showRegisterPage() {
+    document.getElementById('login-box').style.display = 'none';
+    document.getElementById('register-box').style.display = 'block';
+}
+
+function checkLoginStatus() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const authBox = document.getElementById('auth-container');
+    const mainApp = document.getElementById('main-app');
+
+    if (isLoggedIn === 'true') {
+        CURRENT_USER_ID = parseInt(localStorage.getItem('currentUserId')) || 1;
+        authBox.style.display = 'none';
+        mainApp.style.display = 'block';
+
+        const username = localStorage.getItem('currentUser') || 'User';
+        document.getElementById('current-username-display').innerText = username;
+        document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${username}&background=f472b6&color=fff`;
+
+        loadUserReputation(CURRENT_USER_ID);
+        loadPopularMembers();
+        searchProducts(); // 預設搜尋
+        startUnreadPolling(); // 立即載入未讀數並開始輪詢
+    } else {
+        authBox.style.display = 'flex';
+        mainApp.style.display = 'none';
+        showLoginPage();
+    }
+}
+
+function startUnreadPolling() {
+    // 防止重複建立 interval
+    if (unreadPollingInterval) clearInterval(unreadPollingInterval);
+    // 立即執行一次
+    loadUserChats();
+    // 每 5 秒自動重整未讀數
+    unreadPollingInterval = setInterval(() => {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            loadUserChats();
+        }
+    }, 5000);
+}
+
+function stopUnreadPolling() {
+    if (unreadPollingInterval) {
+        clearInterval(unreadPollingInterval);
+        unreadPollingInterval = null;
+    }
+    updateMessagesUnreadBadge(0);
+}
+
+async function handleLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const errorBox = document.getElementById('login-error');
+    errorBox.style.display = 'none';
+
+    if (!email || !password) {
+        errorBox.innerText = '請輸入 Email 與密碼';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('currentUser', data.username);
+            localStorage.setItem('currentUserId', data.id);
+            checkLoginStatus();
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+        } else {
+            const err = await res.json();
+            errorBox.innerText = err.detail || '登入失敗';
+            errorBox.style.display = 'block';
+        }
+    } catch (err) {
+        errorBox.innerText = '伺服器連線錯誤';
+        errorBox.style.display = 'block';
+    }
+}
+
+async function handleRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value.trim();
+    const confirmPassword = document.getElementById('reg-password-confirm').value.trim();
+    const errorBox = document.getElementById('register-error');
+    errorBox.style.display = 'none';
+
+    if (!username || !email || !password || !confirmPassword) {
+        errorBox.innerText = '所有欄位皆為必填';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    // 簡單 Email 格式檢查
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+        errorBox.innerText = 'Email 格式不正確';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        errorBox.innerText = '密碼與確認密碼不一致';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+        });
+
+        if (res.ok) {
+            alert('🎉 註冊成功！請返回登入！');
+            document.getElementById('reg-username').value = '';
+            document.getElementById('reg-email').value = '';
+            document.getElementById('reg-password').value = '';
+            document.getElementById('reg-password-confirm').value = '';
+            showLoginPage();
+        } else {
+            const err = await res.json();
+            errorBox.innerText = err.detail || '註冊失敗';
+            errorBox.style.display = 'block';
+        }
+    } catch (err) {
+        errorBox.innerText = '伺服器連線錯誤';
+        errorBox.style.display = 'block';
+    }
+}
+
+function handleLogout() {
+    stopUnreadPolling(); // 停止未讀數輪詢
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('currentUserId');
+
+    // 清除分頁狀態並回到首頁
+    document.querySelectorAll('nav a').forEach(el => el.classList.remove('active'));
+    document.querySelector('nav a:nth-child(1)').classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.getElementById(`tab-home`).style.display = 'block';
+
+    // 清除商品資料等敏感資訊
+    document.getElementById('product-grid').innerHTML = '';
+    document.getElementById('wishlist-grid').innerHTML = '';
+    document.getElementById('orders-grid').innerHTML = '';
+
+    checkLoginStatus();
+}
 
 // 初始化載入
 document.addEventListener('DOMContentLoaded', () => {
-    CURRENT_USER_ID = 1;
-    loadUserReputation(CURRENT_USER_ID);
-    loadPopularMembers();
-    searchProducts(); // 預設搜尋
+    checkLoginStatus();
 });
 
 let memberMap = {}; // { id: name }
@@ -200,7 +356,24 @@ function switchTab(event, tabId) {
 
     if (tabId === 'wishlist') loadWishlists();
     if (tabId === 'orders') loadOrders();
+    if (tabId === 'messages') showMessagesPage();
     if (tabId === 'profile') loadProfile();
+}
+
+async function showMessagesPage() {
+    const listContainer = document.getElementById('messages-list');
+    listContainer.innerHTML = '<li style="text-align: center; color: var(--text-muted);">載入中...</li>';
+
+    try {
+        const chatHTML = await loadUserChats();
+        if (chatHTML.trim() === '') {
+            listContainer.innerHTML = '<li style="text-align: center; color: var(--text-muted); margin-top: 20px;">目前沒有聊天紀錄</li>';
+        } else {
+            listContainer.innerHTML = chatHTML;
+        }
+    } catch (err) {
+        listContainer.innerHTML = '<li style="text-align: center; color: var(--text-muted); margin-top: 20px;">目前沒有聊天紀錄</li>';
+    }
 }
 
 // 個人資訊載入
@@ -215,12 +388,8 @@ async function loadProfile() {
         const boughtRes = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/bought_orders`);
         const boughtOrders = await boughtRes.json();
 
-        const notifRes = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/notifications`);
-        const notifications = await notifRes.json();
-
         let soldHTML = soldProducts.map(p => `<li>精選周邊 #${p.ProductID} (NT$ ${p.Price}) - 狀態: ${p.Status}</li>`).join('');
         let boughtHTML = boughtOrders.map(o => `<li>訂單 #${o.OrderID} (商品 #${o.ProductID}, NT$ ${o.OrderPrice}) - 狀態: ${o.Status}</li>`).join('');
-        let notifHTML = notifications.map(n => `<li style="margin-bottom:8px; border-bottom: 1px solid #eee; padding-bottom: 5px;"><strong>User ${n.SenderID}</strong> (商品 #${n.ProductID}): ${n.Content.substring(0, 30)}${n.MediaUrl ? ' [附帶多媒體檔案]' : ''}</li>`).join('');
 
         document.getElementById('profile-container').innerHTML = `
             <p style="margin-bottom:10px;"><strong><i class="fa-solid fa-id-card"></i> 使用者 ID：</strong> ${user.UserID}</p>
@@ -229,16 +398,12 @@ async function loadProfile() {
             <p style="margin-bottom:10px;"><strong><i class="fa-solid fa-star"></i> 賣家信譽：</strong> ⭐ ${user.SellerReputation}</p>
             <p style="margin-bottom:10px;"><strong><i class="fa-solid fa-star-half-stroke"></i> 買家信譽：</strong> ⭐ ${user.BuyerReputation}</p>
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
-            
-            <h3 style="margin-bottom: 10px; color: #f59e0b;"><i class="fa-solid fa-bell"></i> 最新對話通知</h3>
-            <ul style="padding-left: 20px; margin-bottom: 20px; color: var(--text); line-height: 1.5; list-style-type: disc;">
-                ${notifHTML || '<li>目前沒有任何新通知</li>'}
-            </ul>
 
             <h3 style="margin-bottom: 10px; color: var(--primary);"><i class="fa-solid fa-box-open"></i> 賣出商品紀錄</h3>
             <ul style="padding-left: 20px; margin-bottom: 20px; color: var(--text-muted); line-height: 1.8;">
                 ${soldHTML || '<li>目前沒有賣出紀錄</li>'}
             </ul>
+            
             <h3 style="margin-bottom: 10px; color: var(--secondary);"><i class="fa-solid fa-bag-shopping"></i> 買入商品紀錄</h3>
             <ul style="padding-left: 20px; color: var(--text-muted); line-height: 1.8;">
                 ${boughtHTML || '<li>目前沒有買入紀錄</li>'}
@@ -285,7 +450,7 @@ function openProductModal(id) {
 
     document.getElementById('detail-chat-btn').onclick = () => {
         document.getElementById('product-modal').classList.remove('show');
-        openChatModal(id, p.SellerID);
+        openChatModal(id, p.SellerID, p.ProductName);
     };
 
     document.getElementById('product-modal').classList.add('show');
@@ -469,113 +634,199 @@ async function sellProduct() {
 // ===============================
 // 對話系統邏輯 (Chat)
 // ===============================
-let currentChatProductId = null;
-let currentChatSellerId = null;
-let currentChatMessages = [];
+let currentChatId = null;
+let chatPollingInterval = null;
 
-function openChatModal(productId, sellerId) {
-    currentChatProductId = productId;
-    currentChatSellerId = sellerId;
-
-    // 動態修改標題
-    const titleEl = document.querySelector('#chat-modal h2');
-    if (CURRENT_USER_ID === sellerId) {
-        titleEl.innerHTML = '<i class="fa-regular fa-comments"></i> 回覆買家';
-    } else {
-        titleEl.innerHTML = '<i class="fa-regular fa-comments"></i> 聯絡賣家';
+async function markChatAsRead(chatId) {
+    if (!CURRENT_USER_ID || !chatId) return;
+    try {
+        await fetch(`${API_BASE}/chats/${chatId}/read?user_id=${CURRENT_USER_ID}`, {
+            method: 'POST'
+        });
+        // 更新完已讀後，重抓一次 chats 更新標籤
+        loadUserChats().then(html => {
+            const listContainer = document.getElementById('messages-list');
+            if (listContainer && document.getElementById('tab-messages').style.display !== 'none') {
+                listContainer.innerHTML = html || '<li style="text-align: center; color: var(--text-muted); margin-top: 20px;">目前沒有聊天紀錄</li>';
+            }
+        });
+    } catch (e) {
+        console.error("Failed to mark chat as read", e);
     }
+}
+
+function updateMessagesUnreadBadge(totalUnread) {
+    const badge = document.getElementById('nav-unread-badge');
+    if (badge) {
+        if (totalUnread > 0) {
+            badge.innerText = totalUnread;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+async function openChatModal(productId, sellerId, productName) {
+    if (!CURRENT_USER_ID) return alert("請先登入");
+    document.getElementById('chat-title').innerHTML = `<i class="fa-regular fa-comments"></i> ${productName || '聯絡賣家'}`;
+    const buyerId = CURRENT_USER_ID;
+
+    // Prevent open self
+    if (buyerId === sellerId) {
+        alert("這是您自己的商品喔！");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/chats/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: productId, buyer_id: buyerId, seller_id: sellerId })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            currentChatId = data.chat_id;
+
+            // 標記為已讀
+            await markChatAsRead(currentChatId);
+
+            document.getElementById('chat-modal').classList.add('show');
+            loadMessages();
+            if (chatPollingInterval) clearInterval(chatPollingInterval);
+            chatPollingInterval = setInterval(loadMessages, 3000);
+        } else {
+            alert('無法建立聊天室');
+        }
+    } catch (err) {
+        console.error('Failed to create chat', err);
+    }
+}
+
+function openExistingChat(chatId, productName) {
+    currentChatId = chatId;
+    if (productName) {
+        document.getElementById('chat-title').innerHTML = `<i class="fa-regular fa-comments"></i> ${productName}`;
+    } else {
+        document.getElementById('chat-title').innerHTML = `<i class="fa-regular fa-comments"></i> 聊天室`;
+    }
+
+    // 標記聊天為已讀
+    markChatAsRead(chatId);
 
     document.getElementById('chat-modal').classList.add('show');
     loadMessages();
+    if (chatPollingInterval) clearInterval(chatPollingInterval);
+    chatPollingInterval = setInterval(loadMessages, 3000);
+}
+
+function closeChatModal() {
+    document.getElementById('chat-modal').classList.remove('show');
+    if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+        chatPollingInterval = null;
+    }
+    currentChatId = null;
 }
 
 async function loadMessages() {
-    if (!currentChatProductId) return;
+    if (!currentChatId) return;
     const msgContainer = document.getElementById('chat-messages');
+
+    // Check if user is scrolled near bottom
+    const isScrolledToBottom = msgContainer.scrollHeight - msgContainer.clientHeight <= msgContainer.scrollTop + 10;
+
     try {
-        const res = await fetch(`${API_BASE}/products/${currentChatProductId}/messages`);
+        const res = await fetch(`${API_BASE}/messages/${currentChatId}`);
         const msgs = await res.json();
-        currentChatMessages = msgs;
 
         msgContainer.innerHTML = msgs.length ? msgs.map(m => {
-            let mediaHTML = '';
-            if (m.MediaUrl) {
-                const fullMediaUrl = m.MediaUrl.startsWith('http') ? m.MediaUrl : `${API_BASE}/uploads/${m.MediaUrl.split('/').pop()}`;
-                if (m.MediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
-                    mediaHTML = `<video src="${fullMediaUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 10px;"></video>`;
-                } else {
-                    mediaHTML = `<img src="${fullMediaUrl}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
-                }
-            }
+            const isMe = m.sender_id === CURRENT_USER_ID;
             return `
-            <div style="align-self: ${m.SenderID === CURRENT_USER_ID ? 'flex-end' : 'flex-start'}; background: ${m.SenderID === CURRENT_USER_ID ? 'var(--primary)' : 'rgba(255,255,255,0.8)'}; color: ${m.SenderID === CURRENT_USER_ID ? 'white' : 'var(--text)'}; padding: 10px 15px; border-radius: 12px; max-width: 80%; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <div style="align-self: ${isMe ? 'flex-end' : 'flex-start'}; background: ${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.8)'}; color: ${isMe ? 'white' : 'var(--text)'}; padding: 10px 15px; border-radius: 12px; max-width: 80%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <p style="font-size: 0.75rem; margin-bottom: 5px; opacity: 0.8; font-weight: bold;">
-                    ${m.SenderID === currentChatSellerId ? '賣家' : '買家'} (User ${m.SenderID})
+                    ${isMe ? '我' : `User ${m.sender_id}`}
                 </p>
-                <p style="word-break: break-all;">${m.Content}</p>
-                ${mediaHTML}
+                <p style="word-break: break-all; font-size: 0.95rem;">${m.message}</p>
+                <p style="font-size: 0.65rem; text-align: right; margin-top: 5px; opacity: 0.7;">
+                    ${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
             </div>
             `;
         }).join('') : '<p style="text-align: center; color: var(--text-muted); margin-top: 50px;">還沒有留言，來打個招呼吧！</p>';
-        msgContainer.scrollTop = msgContainer.scrollHeight;
+
+        if (isScrolledToBottom) {
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
     } catch (err) { console.error('Failed to load messages', err); }
 }
 
 document.getElementById('chat-send-btn').addEventListener('click', async () => {
     const input = document.getElementById('chat-input');
-    const fileInput = document.getElementById('chat-file-input');
     const content = input.value.trim();
 
-    // 如果沒有文字 也沒有檔案 就不要送出
-    if (!content && fileInput.files.length === 0) return;
-    if (!currentChatProductId) return;
-
-    const senderId = CURRENT_USER_ID;
-    let receiverId = currentChatSellerId;
-
-    if (senderId === currentChatSellerId) {
-        const lastBuyerMsg = currentChatMessages.slice().reverse().find(m => m.SenderID !== currentChatSellerId);
-        if (lastBuyerMsg) {
-            receiverId = lastBuyerMsg.SenderID;
-        } else {
-            alert('目前沒有買家詢問，無法回覆喔！');
-            return;
-        }
-    }
-
-    // 處理檔案上傳
-    let mediaUrl = null;
-    if (fileInput.files.length > 0) {
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        try {
-            const uploadRes = await fetch(`${API_BASE}/upload-image/`, {
-                method: 'POST',
-                body: formData
-            });
-            if (uploadRes.ok) {
-                const uploadData = await uploadRes.json();
-                mediaUrl = uploadData.filename;
-            }
-        } catch (err) { console.error("Upload failed", err); }
-    }
+    if (!content || !currentChatId) return;
 
     try {
-        const res = await fetch(`${API_BASE}/messages/`, {
+        const res = await fetch(`${API_BASE}/messages/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                ProductID: currentChatProductId,
-                SenderID: senderId,
-                ReceiverID: receiverId,
-                Content: content || '(傳送了多媒體檔案)',
-                MediaUrl: mediaUrl
+                chat_id: currentChatId,
+                sender_id: CURRENT_USER_ID,
+                message: content
             })
         });
         if (res.ok) {
             input.value = '';
-            fileInput.value = ''; // 清除檔案
-            loadMessages();
+            await loadMessages();
+            const msgContainer = document.getElementById('chat-messages');
+            msgContainer.scrollTop = msgContainer.scrollHeight;
         }
     } catch (err) { console.error('Send message failed', err); }
 });
+
+async function loadUserChats() {
+    if (!CURRENT_USER_ID) return '';
+    try {
+        const res = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/chats`);
+        const chats = await res.json();
+
+        let totalUnread = 0;
+
+        const html = chats.map(c => {
+            const unreadCount = c.unread_count || 0;
+            totalUnread += unreadCount;
+
+            const isUnread = unreadCount > 0;
+            const itemClass = isUnread ? "unread-chat-item" : "";
+            const titleClass = isUnread ? "unread-chat-title" : "";
+            const unreadLabel = isUnread ? `<span class="unread-chat-label">${unreadCount} 則未讀</span>` : "";
+
+            return `
+            <li class="${itemClass}" style="margin-bottom:12px; border-bottom: 1px solid var(--glass-border); padding: 10px; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="openExistingChat(${c.chat_id}, '${c.product_name}')">
+                <div class="${titleClass}" style="font-weight: 600; color: var(--primary);">
+                    <i class="fa-regular fa-comments"></i> 聊天室: ${c.product_name} ${unreadLabel}
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+                    ${c.last_message ? c.last_message.substring(0, 40) : '(尚無新訊息)'}
+                </div>
+            </li>
+        `}).join('');
+
+        // 更新導覽列未讀徽章（不論在哪一個 tab）
+        updateMessagesUnreadBadge(totalUnread);
+
+        // 若 Messages tab 目前是可見的，也更新清單
+        const messagesTab = document.getElementById('tab-messages');
+        const listContainer = document.getElementById('messages-list');
+        if (messagesTab && messagesTab.style.display !== 'none' && listContainer) {
+            listContainer.innerHTML = html || '<li style="text-align: center; color: var(--text-muted); margin-top: 20px;">目前沒有聊天紀錄</li>';
+        }
+
+        return html;
+    } catch (e) {
+        console.error("Failed to load user chats", e);
+        return '<li>無法載入聊天室列表</li>';
+    }
+}

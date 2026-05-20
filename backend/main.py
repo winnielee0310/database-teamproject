@@ -27,6 +27,28 @@ app.add_middleware(
 # ===============================
 # 1. 使用者與信譽模組 (User & Reputation)
 # ===============================
+@app.post("/auth/register", response_model=schemas.AuthResponse, tags=["Auth"])
+def auth_register(user: schemas.UserRegister, db: Session = Depends(get_db)):
+    # 此處密碼先用明文儲存，方便課堂專題測試。正式環境應使用雜湊加密 (如 bcrypt)
+    existing_user = db.query(models.User).filter(
+        (models.User.Email == user.email) | (models.User.Account == user.username)
+    ).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="此信箱或使用者名稱已被註冊！")
+        
+    db_user = models.User(Account=user.username, Password=user.password, Email=user.email)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return schemas.AuthResponse(id=db_user.UserID, username=db_user.Account, email=db_user.Email)
+
+@app.post("/auth/login", response_model=schemas.AuthResponse, tags=["Auth"])
+def auth_login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.Email == user.email, models.User.Password == user.password).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="信箱或密碼錯誤！")
+    return schemas.AuthResponse(id=db_user.UserID, username=db_user.Account, email=db_user.Email)
+
 @app.post("/users/", response_model=schemas.UserResponse, tags=["Users"])
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = models.User(Account=user.Account, Password=user.Password, Email=user.Email)
