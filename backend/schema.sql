@@ -1,6 +1,5 @@
--- 建立資料庫表格 (DDL)
+PRAGMA foreign_keys = ON;
 
--- 1. 使用者 (User)
 CREATE TABLE `User` (
     UserID INTEGER PRIMARY KEY AUTOINCREMENT,
     Account VARCHAR(50) NOT NULL UNIQUE,
@@ -10,14 +9,12 @@ CREATE TABLE `User` (
     BuyerReputation DECIMAL(3, 2) DEFAULT 5.00
 );
 
--- 2. 團體 (Group)
 CREATE TABLE `Group` (
     GroupID INTEGER PRIMARY KEY AUTOINCREMENT,
     GroupName VARCHAR(100) NOT NULL,
     Company VARCHAR(100)
 );
 
--- 3. 成員 (Member)
 CREATE TABLE `Member` (
     MemberID INTEGER PRIMARY KEY AUTOINCREMENT,
     GroupID INTEGER NOT NULL,
@@ -25,18 +22,19 @@ CREATE TABLE `Member` (
     FOREIGN KEY (GroupID) REFERENCES `Group`(GroupID) ON DELETE CASCADE
 );
 
--- 4. 商品 (Product)
 CREATE TABLE `Product` (
     ProductID INTEGER PRIMARY KEY AUTOINCREMENT,
     SellerID INTEGER NOT NULL,
     Price DECIMAL(10, 2) NOT NULL CHECK (Price >= 0),
-    Condition VARCHAR(50) NOT NULL, -- 例如：全新、近全新、微損
-    TradeMethod VARCHAR(50) NOT NULL, -- 例如：面交、郵寄、超商取貨
-    Status VARCHAR(20) DEFAULT 'Available', -- Available, Sold, Removed
+    ProductName VARCHAR(100) NOT NULL,
+    Description TEXT,
+    Condition VARCHAR(50) NOT NULL,
+    TradeMethod VARCHAR(50) NOT NULL,
+    Status VARCHAR(20) DEFAULT 'Available',
+    ImageUrl VARCHAR(255),
     FOREIGN KEY (SellerID) REFERENCES `User`(UserID)
 );
 
--- 5. 商品成員關聯 (Product_Member_Rel)
 CREATE TABLE `Product_Member_Rel` (
     RelID INTEGER PRIMARY KEY AUTOINCREMENT,
     ProductID INTEGER NOT NULL,
@@ -45,19 +43,17 @@ CREATE TABLE `Product_Member_Rel` (
     FOREIGN KEY (MemberID) REFERENCES `Member`(MemberID) ON DELETE CASCADE
 );
 
--- 6. 訂單 (Order)
 CREATE TABLE `Order` (
     OrderID INTEGER PRIMARY KEY AUTOINCREMENT,
     BuyerID INTEGER NOT NULL,
-    ProductID INTEGER NOT NULL UNIQUE, -- 1:1 對應商品
+    ProductID INTEGER NOT NULL UNIQUE,
     OrderPrice DECIMAL(10, 2) NOT NULL CHECK (OrderPrice >= 0),
-    Status VARCHAR(20) DEFAULT 'Pending', -- Pending, Shipped, Completed
+    Status VARCHAR(20) DEFAULT 'Pending',
     OrderDate DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (BuyerID) REFERENCES `User`(UserID),
     FOREIGN KEY (ProductID) REFERENCES `Product`(ProductID)
 );
 
--- 7. 願望清單 (Wishlist)
 CREATE TABLE `Wishlist` (
     WishID INTEGER PRIMARY KEY AUTOINCREMENT,
     UserID INTEGER NOT NULL,
@@ -68,13 +64,47 @@ CREATE TABLE `Wishlist` (
     FOREIGN KEY (MemberID) REFERENCES `Member`(MemberID) ON DELETE CASCADE
 );
 
--- 8. 評價 (Review)
 CREATE TABLE `Review` (
     ReviewID INTEGER PRIMARY KEY AUTOINCREMENT,
-    OrderID INTEGER NOT NULL UNIQUE, -- 1:1 對應訂單
+    OrderID INTEGER NOT NULL UNIQUE,
     PackingScore INTEGER NOT NULL CHECK (PackingScore BETWEEN 1 AND 5),
     VideoScore INTEGER NOT NULL CHECK (VideoScore BETWEEN 1 AND 5),
     SpeedScore INTEGER NOT NULL CHECK (SpeedScore BETWEEN 1 AND 5),
     Comment TEXT,
     FOREIGN KEY (OrderID) REFERENCES `Order`(OrderID) ON DELETE CASCADE
+);
+
+CREATE TABLE `ProductMessage` (
+    MessageID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProductID INTEGER NOT NULL,
+    SenderID INTEGER NOT NULL,
+    ReceiverID INTEGER NOT NULL,
+    Content TEXT NOT NULL,
+    MediaUrl VARCHAR(255),
+    SentAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ProductID) REFERENCES `Product`(ProductID) ON DELETE CASCADE,
+    FOREIGN KEY (SenderID) REFERENCES `User`(UserID),
+    FOREIGN KEY (ReceiverID) REFERENCES `User`(UserID)
+);
+
+CREATE TABLE `Chat` (
+    ChatID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProductID INTEGER NOT NULL,
+    BuyerID INTEGER NOT NULL,
+    SellerID INTEGER NOT NULL,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ProductID) REFERENCES `Product`(ProductID) ON DELETE CASCADE,
+    FOREIGN KEY (BuyerID) REFERENCES `User`(UserID),
+    FOREIGN KEY (SellerID) REFERENCES `User`(UserID)
+);
+
+CREATE TABLE `ChatMessage` (
+    MessageID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ChatID INTEGER NOT NULL,
+    SenderID INTEGER NOT NULL,
+    Message TEXT NOT NULL,
+    IsRead BOOLEAN DEFAULT 0,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ChatID) REFERENCES `Chat`(ChatID) ON DELETE CASCADE,
+    FOREIGN KEY (SenderID) REFERENCES `User`(UserID)
 );

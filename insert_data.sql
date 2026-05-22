@@ -1,46 +1,45 @@
--- 插入測試資料 (DML)
-
--- 1. 插入使用者
-INSERT INTO `User` (Account, Password, Email, SellerReputation, BuyerReputation) VALUES 
+INSERT INTO `User` (Account, Password, Email, SellerReputation, BuyerReputation) VALUES
 ('winnie_01', 'hashed_pw_1', 'winnie@example.com', 4.8, 4.9),
 ('fan_boy_99', 'hashed_pw_2', 'fanboy@example.com', 5.0, 4.5),
-('kpop_lover', 'hashed_pw_3', 'lover@example.com', 4.2, 5.0);
+('kpop_lover', 'hashed_pw_3', 'lover@example.com', 4.2, 5.0),
+('demo_user', 'demo1234', 'demo@example.com', 5.0, 5.0);
 
--- 2. 插入團體
-INSERT INTO `Group` (GroupName, Company) VALUES 
+INSERT INTO `Group` (GroupName, Company) VALUES
 ('NewJeans', 'ADOR'),
 ('SEVENTEEN', 'PLEDIS'),
-('IVE', 'Starship');
+('IVE', 'Starship'),
+('BLACKPINK', 'YG Entertainment'),
+('aespa', 'SM Entertainment'),
+('BTS', 'BIGHIT MUSIC');
 
--- 3. 插入成員
-INSERT INTO `Member` (GroupID, MemberName) VALUES 
+INSERT INTO `Member` (GroupID, MemberName) VALUES
 (1, 'Minji'), (1, 'Hanni'), (1, 'Danielle'), (1, 'Haerin'), (1, 'Hyein'),
 (2, 'Jeonghan'), (2, 'Mingyu'), (2, 'Wonwoo'),
-(3, 'Wonyoung'), (3, 'Yujin');
+(3, 'Wonyoung'), (3, 'Yujin'), (3, 'Liz'),
+(4, 'Jisoo'), (4, 'Rose'),
+(5, 'Karina'),
+(6, 'Jungkook');
 
--- 4. 插入商品 (包含單人卡與雙人卡)
-INSERT INTO `Product` (SellerID, Price, Condition, TradeMethod, Status) VALUES 
-(1, 350.00, '全新', '面交', 'Available'),   -- Haerin 小卡
-(2, 500.00, '近全新', '超商取貨', 'Available'), -- Mingyu & Wonwoo 雙人卡
-(3, 800.00, '微損', '郵寄', 'Sold');          -- Wonyoung 專輯
+INSERT INTO `Product` (SellerID, Price, ProductName, Description, Condition, TradeMethod, Status, ImageUrl) VALUES
+(1, 350.00, 'Haerin photocard', 'NewJeans Haerin official photocard in sleeve.', 'New', 'Meetup', 'Available', NULL),
+(2, 500.00, 'Mingyu and Wonwoo card set', 'SEVENTEEN card set, good corners and clean surface.', 'Used - Good', 'Shipping', 'Available', NULL),
+(3, 800.00, 'Wonyoung album inclusions', 'IVE Wonyoung album inclusions bundle.', 'Like New', 'Mailing', 'Sold', NULL),
+(4, 280.00, 'Karina mini photocard', 'aespa Karina mini photocard.', 'New', 'Meetup', 'Available', 'demo_products/aespa_karina_card.jpg'),
+(4, 2500.00, 'BTS ARMY BOMB light stick', 'Official light stick with box.', 'Used - Good', 'Shipping', 'Available', 'demo_products/bts_jungkook_lightstick.jpg');
 
--- 5. 插入商品成員關聯
--- 商品 1 是 Haerin 單人卡
-INSERT INTO `Product_Member_Rel` (ProductID, MemberID) VALUES (1, 4);
--- 商品 2 是 Mingyu & Wonwoo 雙人卡 (解決 N:M 關聯)
-INSERT INTO `Product_Member_Rel` (ProductID, MemberID) VALUES (2, 7), (2, 8);
--- 商品 3 是 Wonyoung
-INSERT INTO `Product_Member_Rel` (ProductID, MemberID) VALUES (3, 9);
+INSERT INTO `Product_Member_Rel` (ProductID, MemberID) VALUES
+(1, 4),
+(2, 7), (2, 8),
+(3, 9),
+(4, 14),
+(5, 15);
 
--- 6. 插入願望清單
-INSERT INTO `Wishlist` (UserID, MemberID, MaxPrice, ConditionReq) VALUES 
-(2, 4, 400.00, '全新'), -- 尋找 Haerin 全新小卡，預算 400
-(1, 7, 600.00, '不限'); -- 尋找 Mingyu 相關周邊，預算 600
+INSERT INTO `Wishlist` (UserID, MemberID, MaxPrice, ConditionReq) VALUES
+(2, 4, 400.00, 'New'),
+(1, 7, 600.00, 'Any');
 
--- 7. 插入訂單 (商品 3 已售出)
-INSERT INTO `Order` (BuyerID, ProductID, OrderPrice, Status) VALUES 
+INSERT INTO `Order` (BuyerID, ProductID, OrderPrice, Status) VALUES
 (1, 3, 800.00, 'Completed');
 
--- 8. 插入評價 (針對訂單 1)
-INSERT INTO `Review` (OrderID, PackingScore, VideoScore, SpeedScore, Comment) VALUES 
-(1, 5, 4, 5, '包裝很完美，出貨也很快！');
+INSERT INTO `Review` (OrderID, PackingScore, VideoScore, SpeedScore, Comment) VALUES
+(1, 5, 4, 5, 'Packed safely and shipped quickly.');

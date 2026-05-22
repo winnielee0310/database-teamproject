@@ -1,32 +1,35 @@
 import sqlite3
-import os
+from pathlib import Path
 
-DB_PATH = "../idol_trade.db"
-SCHEMA_PATH = "../schema.sql"
-DATA_PATH = "../insert_data.sql"
 
-def setup_database():
-    # 若舊的 DB 存在先刪除，確保乾淨環境
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-        
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # 執行 DDL 建立表格
-    with open(SCHEMA_PATH, 'r', encoding='utf-8') as f:
-        schema_script = f.read()
-        cursor.executescript(schema_script)
-        print("✅ 成功建立資料庫 Schema")
-        
-    # 執行 DML 插入測試資料
-    with open(DATA_PATH, 'r', encoding='utf-8') as f:
-        data_script = f.read()
-        cursor.executescript(data_script)
-        print("✅ 成功插入模擬測試資料")
-        
-    conn.commit()
-    conn.close()
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = BASE_DIR.parent
+DB_PATH = PROJECT_DIR / "idol_trade.db"
+SCHEMA_PATH = BASE_DIR / "schema.sql"
+DATA_PATH = BASE_DIR / "insert_data.sql"
+
+
+def setup_database() -> None:
+    if DB_PATH.exists():
+        DB_PATH.unlink()
+        print(f"Removed existing database: {DB_PATH}")
+
+    with SCHEMA_PATH.open("r", encoding="utf-8") as file:
+        schema_script = file.read()
+
+    with DATA_PATH.open("r", encoding="utf-8") as file:
+        data_script = file.read()
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.executescript(schema_script)
+        print("Created database schema.")
+
+        conn.executescript(data_script)
+        print("Inserted demo data.")
+
+    print(f"Database ready: {DB_PATH}")
+
 
 if __name__ == "__main__":
     setup_database()
