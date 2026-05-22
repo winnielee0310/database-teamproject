@@ -257,7 +257,7 @@ async function searchProducts() {
             const card = document.createElement('div');
             card.className = 'product-card';
 
-            const imgUrl = p.ImageUrl ? (p.ImageUrl.startsWith('http') ? p.ImageUrl : `${API_BASE}/uploads/${p.ImageUrl.split('/').pop()}`) : null;
+            const imgUrl = p.ImageUrl ? (p.ImageUrl.startsWith('http') ? p.ImageUrl : `${API_BASE}/uploads/${p.ImageUrl}`) : null;
             const imgHTML = imgUrl
                 ? `<div style="width:100%; height:200px; border-radius:8px; overflow:hidden; margin-bottom:15px;"><img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover;"></div>`
                 : `<div style="width:100%; height:200px; border-radius:8px; background:rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:3rem; margin-bottom:15px;"><i class="fa-regular fa-image"></i></div>`;
@@ -433,7 +433,7 @@ function openProductModal(id) {
     const iconEl = document.getElementById('detail-image-icon');
 
     if (p.ImageUrl) {
-        imgEl.src = p.ImageUrl.startsWith('http') ? p.ImageUrl : `${API_BASE}/uploads/${p.ImageUrl.split('/').pop()}`;
+        imgEl.src = p.ImageUrl.startsWith('http') ? p.ImageUrl : `${API_BASE}/uploads/${p.ImageUrl}`;
         imgEl.style.display = 'block';
         iconEl.style.display = 'none';
     } else {
