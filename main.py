@@ -10,8 +10,13 @@ import shutil
 from fastapi.staticfiles import StaticFiles
 
 os.makedirs("uploads", exist_ok=True)
+os.makedirs("uploads/demo_products", exist_ok=True)
 
 models.Base.metadata.create_all(bind=engine)
+
+# 自動初始化示意商品（若 Product 表為空則插入 9 筆示意資料）
+from seed_demo import seed_demo_products
+seed_demo_products()
 
 app = FastAPI(title="偶像周邊二手交易與訂單管理系統 API", description="基於實體關係圖(ERD)完整設計的交易系統")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
