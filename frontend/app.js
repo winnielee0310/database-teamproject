@@ -9,9 +9,209 @@ let unreadPollingInterval = null;
 let chatPollingInterval = null;
 let memberMap = {};
 let groupMap = {};
+let currentLanguage = localStorage.getItem("uiLanguage") || "en";
+
+const TRANSLATIONS = {
+    en: {
+        "login.title": "Login",
+        "login.email": "Email",
+        "login.password": "Password",
+        "login.submit": "Login",
+        "login.noAccount": "No account?",
+        "login.registerLink": "Register",
+        "login.demo": "Demo: winnie@example.com / hashed_pw_1",
+        "register.title": "Register",
+        "register.username": "Username",
+        "register.confirmPassword": "Confirm password",
+        "register.submit": "Register",
+        "register.already": "Already registered?",
+        "register.backLogin": "Back to login",
+        "nav.home": "Home",
+        "nav.wishlist": "Wishlist",
+        "nav.orders": "Orders",
+        "nav.sell": "Sell",
+        "nav.analytics": "Analytics",
+        "nav.messages": "Messages",
+        "nav.profile": "Profile",
+        "nav.logout": "Logout",
+        "home.titlePrefix": "Find your",
+        "home.titleAccent": "idol goods",
+        "home.subtitle": "Search by group or member, then buy, chat, and review in one place.",
+        "home.search": "Search",
+        "home.results": "Results",
+        "common.groupName": "Group name",
+        "common.memberName": "Member name",
+        "common.add": "Add",
+        "common.group": "Group",
+        "common.members": "Members",
+        "common.loading": "Loading...",
+        "common.confirm": "Confirm",
+        "common.chat": "Chat",
+        "common.buy": "Buy",
+        "wishlist.title": "Wishlist",
+        "wishlist.subtitle": "Add a member and budget so sellers can see what buyers want.",
+        "wishlist.maxPrice": "Max price",
+        "wishlist.myWishlist": "My Wishlist",
+        "orders.title": "Orders",
+        "sell.title": "Sell an item",
+        "sell.subtitle": "List an item with member tags so buyers can find it quickly.",
+        "sell.groupExample": "Example: NewJeans",
+        "sell.membersExample": "Example: Minji, Hanni",
+        "sell.productName": "Product name",
+        "sell.price": "Price",
+        "sell.description": "Description",
+        "sell.image": "Image",
+        "sell.publish": "Publish",
+        "analytics.title": "Database Insights",
+        "analytics.marketTag": "GROUP BY / AVG",
+        "analytics.marketTitle": "Market historical average",
+        "analytics.demandTag": "Wishlist matching",
+        "analytics.demandTitle": "Member demand heat",
+        "analytics.reputationTag": "Review aggregation",
+        "analytics.reputationTitle": "Seller reputation ranking",
+        "messages.title": "Messages",
+        "messages.input": "Type a message...",
+        "profile.title": "Profile",
+        "buy.title": "Confirm purchase",
+        "buy.questionPrefix": "Buy this item for",
+        "review.title": "Review seller",
+        "review.packing": "Packing score (1-5)",
+        "review.video": "Video proof score (1-5)",
+        "review.speed": "Speed score (1-5)",
+        "review.comment": "Comment",
+        "review.submit": "Submit review",
+        "detail.title": "Product details",
+        "detail.name": "Name:",
+        "detail.description": "Description:",
+        "detail.condition": "Condition:",
+        "detail.trade": "Trade:",
+        "detail.seller": "Seller",
+        "detail.sellerId": "Seller ID:",
+        "detail.reputation": "Reputation:",
+        "value.New": "New",
+        "value.Like New": "Like New",
+        "value.Used - Good": "Used - Good",
+        "value.Used - Fair": "Used - Fair",
+        "value.Meetup": "Meetup",
+        "value.Shipping": "Shipping",
+        "value.Mailing": "Mailing",
+    },
+    zh: {
+        "login.title": "登入",
+        "login.email": "電子郵件",
+        "login.password": "密碼",
+        "login.submit": "登入",
+        "login.noAccount": "還沒有帳號？",
+        "login.registerLink": "註冊",
+        "login.demo": "測試帳號：winnie@example.com / hashed_pw_1",
+        "register.title": "註冊",
+        "register.username": "使用者名稱",
+        "register.confirmPassword": "確認密碼",
+        "register.submit": "註冊",
+        "register.already": "已經有帳號？",
+        "register.backLogin": "回到登入",
+        "nav.home": "首頁",
+        "nav.wishlist": "願望清單",
+        "nav.orders": "訂單",
+        "nav.sell": "上架",
+        "nav.analytics": "分析",
+        "nav.messages": "訊息",
+        "nav.profile": "個人資料",
+        "nav.logout": "登出",
+        "home.titlePrefix": "尋找你的",
+        "home.titleAccent": "偶像周邊",
+        "home.subtitle": "依團體或成員搜尋，並在同一個系統完成購買、聊天與評價。",
+        "home.search": "搜尋",
+        "home.results": "搜尋結果",
+        "common.groupName": "團體名稱",
+        "common.memberName": "成員名稱",
+        "common.add": "新增",
+        "common.group": "團體",
+        "common.members": "成員",
+        "common.loading": "載入中...",
+        "common.confirm": "確認",
+        "common.chat": "聊天",
+        "common.buy": "購買",
+        "wishlist.title": "願望清單",
+        "wishlist.subtitle": "設定想找的成員與預算，讓系統自動比對符合條件的商品。",
+        "wishlist.maxPrice": "最高價格",
+        "wishlist.myWishlist": "我的願望清單",
+        "orders.title": "訂單",
+        "sell.title": "上架商品",
+        "sell.subtitle": "用成員標籤上架商品，讓買家更快搜尋到。",
+        "sell.groupExample": "例如：NewJeans",
+        "sell.membersExample": "例如：Minji, Hanni",
+        "sell.productName": "商品名稱",
+        "sell.price": "價格",
+        "sell.description": "商品描述",
+        "sell.image": "圖片",
+        "sell.publish": "發布",
+        "analytics.title": "資料庫分析亮點",
+        "analytics.marketTag": "GROUP BY / AVG",
+        "analytics.marketTitle": "市場歷史均價",
+        "analytics.demandTag": "Wishlist 撮合",
+        "analytics.demandTitle": "成員需求熱度",
+        "analytics.reputationTag": "評價聚合",
+        "analytics.reputationTitle": "賣家信譽排行",
+        "messages.title": "訊息",
+        "messages.input": "輸入訊息...",
+        "profile.title": "個人資料",
+        "buy.title": "確認購買",
+        "buy.questionPrefix": "是否購買此商品，價格為",
+        "review.title": "評價賣家",
+        "review.packing": "包裝分數（1-5）",
+        "review.video": "對光/影片確認分數（1-5）",
+        "review.speed": "出貨速度分數（1-5）",
+        "review.comment": "評論",
+        "review.submit": "送出評價",
+        "detail.title": "商品詳情",
+        "detail.name": "名稱：",
+        "detail.description": "描述：",
+        "detail.condition": "狀況：",
+        "detail.trade": "交易方式：",
+        "detail.seller": "賣家",
+        "detail.sellerId": "賣家編號：",
+        "detail.reputation": "信譽分數：",
+        "value.New": "全新",
+        "value.Like New": "近全新",
+        "value.Used - Good": "二手良好",
+        "value.Used - Fair": "二手普通",
+        "value.Meetup": "面交",
+        "value.Shipping": "宅配",
+        "value.Mailing": "郵寄",
+    },
+};
 
 function $(id) {
     return document.getElementById(id);
+}
+
+function translate(key) {
+    return TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key] || key;
+}
+
+function applyTranslations() {
+    document.documentElement.lang = currentLanguage === "zh" ? "zh-Hant" : "en";
+    document.querySelectorAll("[data-i18n]").forEach((element) => {
+        element.textContent = translate(element.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+        element.placeholder = translate(element.dataset.i18nPlaceholder);
+    });
+
+    const toggleLabel = $("language-toggle-label");
+    if (toggleLabel) toggleLabel.innerText = currentLanguage === "en" ? "中文" : "EN";
+}
+
+function setupLanguageToggle() {
+    const button = $("language-toggle");
+    if (!button) return;
+    button.addEventListener("click", () => {
+        currentLanguage = currentLanguage === "en" ? "zh" : "en";
+        localStorage.setItem("uiLanguage", currentLanguage);
+        applyTranslations();
+    });
+    applyTranslations();
 }
 
 function escapeHTML(value) {
@@ -253,6 +453,22 @@ function renderProductCard(product) {
     `;
 }
 
+function matchToProduct(match) {
+    return {
+        ProductID: match.ProductID,
+        SellerID: match.SellerID,
+        Price: match.Price,
+        ProductName: match.ProductName,
+        Description: "",
+        Condition: match.Condition,
+        TradeMethod: match.TradeMethod,
+        Status: "Available",
+        ImageUrl: match.ImageUrl,
+        MemberNames: match.MemberNames || [],
+        GroupNames: match.GroupNames || [],
+    };
+}
+
 function switchTab(event, tabId) {
     if (event) event.preventDefault();
     document.querySelectorAll(".tab-content").forEach((element) => {
@@ -267,6 +483,7 @@ function switchTab(event, tabId) {
 
     if (tabId === "wishlist") loadWishlists();
     if (tabId === "orders") loadOrders();
+    if (tabId === "analytics") loadAnalytics();
     if (tabId === "messages") showMessagesPage();
     if (tabId === "profile") loadProfile();
 }
@@ -293,7 +510,7 @@ async function confirmBuy() {
             }),
         });
         await readJson(response);
-        alert("Purchase completed.");
+        alert("Order created. Status: Pending.");
         $("buy-modal").classList.remove("show");
         searchProducts();
         loadOrders();
@@ -387,10 +604,42 @@ async function addWishlist() {
 
 async function loadWishlists() {
     try {
-        const response = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/wishlists`);
-        const wishlists = await readJson(response);
+        const [wishlistResponse, matchResponse] = await Promise.all([
+            fetch(`${API_BASE}/users/${CURRENT_USER_ID}/wishlists`),
+            fetch(`${API_BASE}/users/${CURRENT_USER_ID}/wishlist_matches`),
+        ]);
+        const wishlists = await readJson(wishlistResponse);
+        const matches = await readJson(matchResponse);
         const grid = $("wishlist-grid");
-        grid.innerHTML = wishlists.length ? wishlists.map((wish) => `
+
+        const matchedProducts = matches.map(matchToProduct);
+        matchedProducts.forEach((product) => {
+            if (!currentSearchProducts.some((item) => item.ProductID === product.ProductID)) {
+                currentSearchProducts.push(product);
+            }
+        });
+
+        const matchesHtml = matches.length ? `
+            <div style="grid-column:1/-1; margin-bottom:5px;">
+                <h3 style="color:var(--primary); margin-bottom:10px;">Matched products</h3>
+            </div>
+            ${matches.map((match) => `
+                <div class="product-card">
+                    <div class="tags">
+                        <span class="tag condition">Wishlist match</span>
+                        <span class="tag method">${escapeHTML(match.MemberName)}</span>
+                    </div>
+                    <h3>${escapeHTML(match.ProductName)}</h3>
+                    <p style="color:var(--text-muted); font-size:0.9rem; margin-top:8px;">${escapeHTML((match.GroupNames || []).join(", ") || "Unknown group")} - ${escapeHTML((match.MemberNames || []).join(", ") || "No member tag")}</p>
+                    <p style="color:var(--text-muted); font-size:0.9rem; margin-top:8px;">${escapeHTML(match.Condition)} / ${escapeHTML(match.TradeMethod)}</p>
+                    <div class="price">NT$ ${Number(match.Price).toFixed(0)}</div>
+                    <button class="btn-primary" style="width:100%; padding:10px; margin-bottom:8px;" onclick="openProductModal(${match.ProductID})">Details</button>
+                    <button class="btn-primary" style="width:100%; padding:10px; background:transparent; border:1px solid var(--secondary); color:var(--secondary);" onclick="openBuyModal(${match.ProductID}, ${Number(match.Price)})">Buy</button>
+                </div>
+            `).join("")}
+        ` : "";
+
+        const wishesHtml = wishlists.length ? wishlists.map((wish) => `
             <div class="product-card">
                 <div class="tags"><span class="tag method">Watching</span></div>
                 <h3>${escapeHTML(memberMap[wish.MemberID] || `Member #${wish.MemberID}`)}</h3>
@@ -398,6 +647,8 @@ async function loadWishlists() {
                 <p style="color:var(--text-muted);">${escapeHTML(wish.ConditionReq || "Any condition")}</p>
             </div>
         `).join("") : '<p style="color:var(--text-muted);">No wishlist items yet.</p>';
+
+        grid.innerHTML = matchesHtml + wishesHtml;
     } catch (error) {
         console.error(error);
     }
@@ -408,18 +659,94 @@ async function loadOrders() {
         const response = await fetch(`${API_BASE}/users/${CURRENT_USER_ID}/orders`);
         const orders = await readJson(response);
         const grid = $("orders-grid");
-        grid.innerHTML = orders.length ? orders.map((order) => `
-            <div class="product-card">
-                <div class="tags"><span class="tag condition">${escapeHTML(order.Status)}</span></div>
-                <h3>Order #${order.OrderID}</h3>
-                <p style="color:var(--text-muted); margin-bottom:10px;">Product ID: ${order.ProductID}</p>
-                <div class="price">NT$ ${Number(order.OrderPrice).toFixed(0)}</div>
-                <p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;">${new Date(order.OrderDate).toLocaleString()}</p>
-                ${order.Status === "Completed" ? `<button onclick="openReviewModal(${order.OrderID})" class="btn-primary" style="width:100%; margin-top:15px; padding:10px; font-size:0.9rem;">Review seller</button>` : ""}
-            </div>
-        `).join("") : '<p style="color:var(--text-muted);">No orders yet.</p>';
+        grid.innerHTML = orders.length ? orders.map((order) => {
+            const nextAction = order.Status === "Pending"
+                ? `<button onclick="updateOrderStatus(${order.OrderID}, 'Shipped')" class="btn-primary" style="width:100%; margin-top:15px; padding:10px; font-size:0.9rem;">Mark as shipped</button>`
+                : order.Status === "Shipped"
+                    ? `<button onclick="updateOrderStatus(${order.OrderID}, 'Completed')" class="btn-primary" style="width:100%; margin-top:15px; padding:10px; font-size:0.9rem;">Mark as completed</button>`
+                    : `<button onclick="openReviewModal(${order.OrderID})" class="btn-primary" style="width:100%; margin-top:15px; padding:10px; font-size:0.9rem;">Review seller</button>`;
+            return `
+                <div class="product-card">
+                    <div class="tags"><span class="tag condition">${escapeHTML(order.Status)}</span></div>
+                    <h3>Order #${order.OrderID}</h3>
+                    <p style="color:var(--text-muted); margin-bottom:10px;">Product ID: ${order.ProductID}</p>
+                    <div class="price">NT$ ${Number(order.OrderPrice).toFixed(0)}</div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;">${new Date(order.OrderDate).toLocaleString()}</p>
+                    ${nextAction}
+                </div>
+            `;
+        }).join("") : '<p style="color:var(--text-muted);">No orders yet.</p>';
     } catch (error) {
         console.error(error);
+    }
+}
+
+function renderAnalyticsRows(rows, formatter, emptyText) {
+    if (!rows.length) {
+        return `<p style="color:var(--text-muted); margin-top:12px;">${emptyText}</p>`;
+    }
+    return `
+        <ul style="list-style:none; padding:0; margin-top:12px; color:var(--text-muted); line-height:1.7;">
+            ${rows.map(formatter).join("")}
+        </ul>
+    `;
+}
+
+async function loadAnalytics() {
+    const marketBox = $("analytics-market");
+    const demandBox = $("analytics-demand");
+    const reputationBox = $("analytics-reputation");
+    if (!marketBox || !demandBox || !reputationBox) return;
+
+    marketBox.innerHTML = '<p style="color:var(--text-muted); margin-top:12px;">Loading...</p>';
+    demandBox.innerHTML = '<p style="color:var(--text-muted); margin-top:12px;">Loading...</p>';
+    reputationBox.innerHTML = '<p style="color:var(--text-muted); margin-top:12px;">Loading...</p>';
+
+    try {
+        const [marketResponse, demandResponse, rankingResponse] = await Promise.all([
+            fetch(`${API_BASE}/analytics/market_average`),
+            fetch(`${API_BASE}/analytics/member_demand`),
+            fetch(`${API_BASE}/analytics/seller_ranking`),
+        ]);
+        const market = await readJson(marketResponse);
+        const demand = await readJson(demandResponse);
+        const ranking = await readJson(rankingResponse);
+
+        marketBox.innerHTML = renderAnalyticsRows(
+            market,
+            (item) => `<li><strong>${escapeHTML(item.GroupName)} ${escapeHTML(item.MemberName)}</strong><br>Trades: ${item.TradeCount} / Avg NT$ ${Number(item.AveragePrice).toFixed(0)} / Range NT$ ${Number(item.MinPrice).toFixed(0)}-${Number(item.MaxPrice).toFixed(0)}</li>`,
+            "No completed order data yet."
+        );
+        demandBox.innerHTML = renderAnalyticsRows(
+            demand,
+            (item) => `<li><strong>${escapeHTML(item.GroupName)} ${escapeHTML(item.MemberName)}</strong><br>Wishlist: ${item.WishlistCount} / Avg budget NT$ ${Number(item.AverageBudget).toFixed(0)} / Available matches: ${item.MatchingAvailableProducts}</li>`,
+            "No wishlist demand data yet."
+        );
+        reputationBox.innerHTML = renderAnalyticsRows(
+            ranking,
+            (item) => `<li><strong>${escapeHTML(item.Account)}</strong> (#${item.SellerID})<br>Reviews: ${item.ReviewCount} / Total ${Number(item.TotalReputation).toFixed(2)} / Packing ${Number(item.AveragePacking).toFixed(2)} / Video ${Number(item.AverageVideo).toFixed(2)} / Speed ${Number(item.AverageSpeed).toFixed(2)}</li>`,
+            "No seller review data yet."
+        );
+    } catch (error) {
+        const message = `<p style="color:#ec4899; margin-top:12px;">${escapeHTML(error.message)}</p>`;
+        marketBox.innerHTML = message;
+        demandBox.innerHTML = message;
+        reputationBox.innerHTML = message;
+    }
+}
+
+async function updateOrderStatus(orderId, status) {
+    try {
+        const response = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Status: status }),
+        });
+        await readJson(response);
+        await loadOrders();
+        loadProfile();
+    } catch (error) {
+        alert(error.message);
     }
 }
 
@@ -448,6 +775,8 @@ async function submitReview() {
         $("review-modal").classList.remove("show");
         $("review-comment").value = "";
         loadUserReputation(CURRENT_USER_ID);
+        loadOrders();
+        loadProfile();
     } catch (error) {
         alert(error.message);
     }
@@ -703,6 +1032,7 @@ async function loadUserChats() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    setupLanguageToggle();
     $("buy-modal-close").addEventListener("click", () => $("buy-modal").classList.remove("show"));
     $("confirm-buy-btn").addEventListener("click", confirmBuy);
     $("chat-send-btn").addEventListener("click", sendChatMessage);

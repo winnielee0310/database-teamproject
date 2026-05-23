@@ -19,7 +19,38 @@ PROJECT_DIR = BASE_DIR.parent
 UPLOAD_DIR = PROJECT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+ORDER_STATUSES = {"Pending", "Shipped", "Completed"}
+ORDER_TRANSITIONS = {
+    "Pending": {"Shipped"},
+    "Shipped": {"Completed"},
+    "Completed": set(),
+}
+
+INDEX_STATEMENTS = [
+    'CREATE INDEX IF NOT EXISTS idx_member_group_id ON "Member" ("團體編號")',
+    'CREATE INDEX IF NOT EXISTS idx_member_name ON "Member" ("成員名稱")',
+    'CREATE INDEX IF NOT EXISTS idx_group_name ON "Group" ("團體名稱")',
+    'CREATE INDEX IF NOT EXISTS idx_product_seller_id ON "Product" ("賣家編號")',
+    'CREATE INDEX IF NOT EXISTS idx_product_status ON "Product" ("狀態")',
+    'CREATE INDEX IF NOT EXISTS idx_product_price ON "Product" ("價格")',
+    'CREATE INDEX IF NOT EXISTS idx_product_member_product ON "Product_Member_Rel" ("商品編號")',
+    'CREATE INDEX IF NOT EXISTS idx_product_member_member ON "Product_Member_Rel" ("成員編號")',
+    'CREATE INDEX IF NOT EXISTS idx_order_buyer ON "Order" ("買家編號")',
+    'CREATE INDEX IF NOT EXISTS idx_wishlist_user ON "Wishlist" ("使用者編號")',
+    'CREATE INDEX IF NOT EXISTS idx_wishlist_member ON "Wishlist" ("成員編號")',
+    'CREATE INDEX IF NOT EXISTS idx_chat_participants ON "Chat" ("買家編號", "賣家編號")',
+    'CREATE INDEX IF NOT EXISTS idx_chat_message_chat ON "ChatMessage" ("聊天室編號")',
+]
+
+
+def ensure_database_indexes() -> None:
+    with engine.begin() as connection:
+        for statement in INDEX_STATEMENTS:
+            connection.exec_driver_sql(statement)
+
+
 models.Base.metadata.create_all(bind=engine)
+ensure_database_indexes()
 
 app = FastAPI(
     title="Idol Merchandise Trading API",
@@ -60,6 +91,79 @@ def product_to_response(product: models.Product) -> schemas.ProductResponse:
         MemberNames=member_names,
         GroupNames=sorted(set(group_names)),
     )
+
+
+def product_to_wishlist_match(
+    wish: models.Wishlist,
+    member_name: str,
+    product: models.Product,
+) -> schemas.WishlistMatchResponse:
+    product_response = product_to_response(product)
+    return schemas.WishlistMatchResponse(
+        WishID=wish.WishID,
+        MemberID=wish.MemberID,
+        MemberName=member_name,
+        ProductID=product_response.ProductID,
+        SellerID=product_response.SellerID,
+        ProductName=product_response.ProductName,
+        Price=product_response.Price,
+        Condition=product_response.Condition,
+        TradeMethod=product_response.TradeMethod,
+        ImageUrl=product_response.ImageUrl,
+        GroupNames=product_response.GroupNames,
+        MemberNames=product_response.MemberNames,
+    )
+
+
+def condition_matches(condition_req: Optional[str], product_condition: str) -> bool:
+    if not condition_req:
+        return True
+    normalized = condition_req.strip().lower()
+    if normalized in {"any", "any condition", "不限", "不限狀況"}:
+        return True
+    return product_condition.strip().lower() == normalized
+
+
+def calculate_seller_reputation(db: Session, seller_id: int) -> dict:
+    result = (
+        db.query(
+            func.avg(models.Review.PackingScore).label("avg_packing"),
+            func.avg(models.Review.VideoScore).label("avg_video"),
+            func.avg(models.Review.SpeedScore).label("avg_speed"),
+        )
+        .join(models.Order, models.Review.OrderID == models.Order.OrderID)
+        .join(models.Product, models.Order.ProductID == models.Product.ProductID)
+        .filter(models.Product.SellerID == seller_id)
+        .first()
+    )
+
+    if not result or result.avg_packing is None:
+        return {
+            "SellerID": seller_id,
+            "Average_Packing": 5.0,
+            "Average_Video": 5.0,
+            "Average_Speed": 5.0,
+            "Total_Reputation": 5.0,
+        }
+
+    total_score = (result.avg_packing + result.avg_video + result.avg_speed) / 3
+    return {
+        "SellerID": seller_id,
+        "Average_Packing": round(float(result.avg_packing), 2),
+        "Average_Video": round(float(result.avg_video), 2),
+        "Average_Speed": round(float(result.avg_speed), 2),
+        "Total_Reputation": round(float(total_score), 2),
+    }
+
+
+def refresh_seller_reputation(db: Session, seller_id: int) -> dict:
+    scores = calculate_seller_reputation(db, seller_id)
+    seller = db.query(models.User).filter(models.User.UserID == seller_id).first()
+    if seller:
+        seller.SellerReputation = scores["Total_Reputation"]
+        db.add(seller)
+        db.commit()
+    return scores
 
 
 def get_or_create_group(db: Session, group_name: str) -> models.Group:
@@ -142,40 +246,14 @@ def get_user_profile(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.UserID == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    refresh_seller_reputation(db, user_id)
+    db.refresh(user)
     return user
 
 
 @app.get("/users/{user_id}/reputation", tags=["Users"])
 def get_seller_reputation(user_id: int, db: Session = Depends(get_db)):
-    result = (
-        db.query(
-            func.avg(models.Review.PackingScore).label("avg_packing"),
-            func.avg(models.Review.VideoScore).label("avg_video"),
-            func.avg(models.Review.SpeedScore).label("avg_speed"),
-        )
-        .join(models.Order, models.Review.OrderID == models.Order.OrderID)
-        .join(models.Product, models.Order.ProductID == models.Product.ProductID)
-        .filter(models.Product.SellerID == user_id)
-        .first()
-    )
-
-    if not result or result.avg_packing is None:
-        return {
-            "SellerID": user_id,
-            "Average_Packing": 5.0,
-            "Average_Video": 5.0,
-            "Average_Speed": 5.0,
-            "Total_Reputation": 5.0,
-        }
-
-    total_score = (result.avg_packing + result.avg_video + result.avg_speed) / 3
-    return {
-        "SellerID": user_id,
-        "Average_Packing": round(float(result.avg_packing), 2),
-        "Average_Video": round(float(result.avg_video), 2),
-        "Average_Speed": round(float(result.avg_speed), 2),
-        "Total_Reputation": round(float(total_score), 2),
-    }
+    return refresh_seller_reputation(db, user_id)
 
 
 @app.get("/users/{user_id}/sold_products", response_model=List[schemas.ProductResponse], tags=["Users"])
@@ -344,6 +422,237 @@ def get_user_wishlists(user_id: int, db: Session = Depends(get_db)):
     return db.query(models.Wishlist).filter(models.Wishlist.UserID == user_id).all()
 
 
+@app.get("/users/{user_id}/wishlist_matches", response_model=List[schemas.WishlistMatchResponse], tags=["Wishlist"])
+def get_user_wishlist_matches(user_id: int, db: Session = Depends(get_db)):
+    wishes = db.query(models.Wishlist).filter(models.Wishlist.UserID == user_id).all()
+    if not wishes:
+        return []
+
+    member_ids = {wish.MemberID for wish in wishes}
+    members = (
+        db.query(models.Member)
+        .filter(models.Member.MemberID.in_(member_ids))
+        .all()
+    )
+    member_names = {member.MemberID: member.MemberName for member in members}
+
+    matches = []
+    seen = set()
+    for wish in wishes:
+        products = (
+            db.query(models.Product)
+            .join(
+                models.ProductMemberRel,
+                models.Product.ProductID == models.ProductMemberRel.ProductID,
+            )
+            .filter(
+                models.ProductMemberRel.MemberID == wish.MemberID,
+                models.Product.Status == "Available",
+                models.Product.Price <= wish.MaxPrice,
+            )
+            .distinct()
+            .order_by(models.Product.ProductID.desc())
+            .all()
+        )
+        for product in products:
+            if not condition_matches(wish.ConditionReq, product.Condition):
+                continue
+            key = (wish.WishID, product.ProductID)
+            if key in seen:
+                continue
+            seen.add(key)
+            matches.append(
+                product_to_wishlist_match(
+                    wish,
+                    member_names.get(wish.MemberID, f"Member #{wish.MemberID}"),
+                    product,
+                )
+            )
+
+    return matches
+
+
+@app.get(
+    "/products/{product_id}/wishlist_matches",
+    response_model=List[schemas.ProductWishlistMatchResponse],
+    tags=["Wishlist"],
+)
+def get_product_wishlist_matches(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.ProductID == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    member_ids = [rel.MemberID for rel in product.members]
+    if not member_ids:
+        return []
+
+    rows = (
+        db.query(models.Wishlist, models.User, models.Member)
+        .join(models.User, models.Wishlist.UserID == models.User.UserID)
+        .join(models.Member, models.Wishlist.MemberID == models.Member.MemberID)
+        .filter(
+            models.Wishlist.MemberID.in_(member_ids),
+            models.Wishlist.MaxPrice >= product.Price,
+        )
+        .all()
+    )
+
+    matches = []
+    seen = set()
+    for wish, user, member in rows:
+        if not condition_matches(wish.ConditionReq, product.Condition):
+            continue
+        if wish.WishID in seen:
+            continue
+        seen.add(wish.WishID)
+        matches.append(
+            schemas.ProductWishlistMatchResponse(
+                WishID=wish.WishID,
+                UserID=wish.UserID,
+                Account=user.Account,
+                MemberID=wish.MemberID,
+                MemberName=member.MemberName,
+                MaxPrice=float(wish.MaxPrice),
+                ConditionReq=wish.ConditionReq,
+            )
+        )
+
+    return matches
+
+
+@app.get("/analytics/market_average", response_model=List[schemas.MarketAverageResponse], tags=["Analytics"])
+def get_market_average(
+    member_name: Optional[str] = None,
+    group_name: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = (
+        db.query(
+            models.Group.GroupName.label("group_name"),
+            models.Member.MemberID.label("member_id"),
+            models.Member.MemberName.label("member_name"),
+            func.count(models.Order.OrderID).label("trade_count"),
+            func.avg(models.Order.OrderPrice).label("average_price"),
+            func.min(models.Order.OrderPrice).label("min_price"),
+            func.max(models.Order.OrderPrice).label("max_price"),
+        )
+        .join(models.Member, models.Member.GroupID == models.Group.GroupID)
+        .join(models.ProductMemberRel, models.ProductMemberRel.MemberID == models.Member.MemberID)
+        .join(models.Product, models.Product.ProductID == models.ProductMemberRel.ProductID)
+        .join(models.Order, models.Order.ProductID == models.Product.ProductID)
+        .filter(models.Order.Status == "Completed")
+    )
+
+    if member_name:
+        query = query.filter(models.Member.MemberName.ilike(f"%{member_name}%"))
+    if group_name:
+        query = query.filter(models.Group.GroupName.ilike(f"%{group_name}%"))
+
+    rows = (
+        query.group_by(models.Group.GroupID, models.Member.MemberID)
+        .order_by(func.avg(models.Order.OrderPrice).desc())
+        .all()
+    )
+
+    return [
+        schemas.MarketAverageResponse(
+            GroupName=row.group_name,
+            MemberID=row.member_id,
+            MemberName=row.member_name,
+            TradeCount=int(row.trade_count),
+            AveragePrice=round(float(row.average_price), 2),
+            MinPrice=round(float(row.min_price), 2),
+            MaxPrice=round(float(row.max_price), 2),
+        )
+        for row in rows
+    ]
+
+
+@app.get("/analytics/member_demand", response_model=List[schemas.MemberDemandResponse], tags=["Analytics"])
+def get_member_demand(db: Session = Depends(get_db)):
+    rows = (
+        db.query(
+            models.Group.GroupName.label("group_name"),
+            models.Member.MemberID.label("member_id"),
+            models.Member.MemberName.label("member_name"),
+            func.count(models.Wishlist.WishID).label("wishlist_count"),
+            func.avg(models.Wishlist.MaxPrice).label("average_budget"),
+        )
+        .join(models.Member, models.Member.GroupID == models.Group.GroupID)
+        .join(models.Wishlist, models.Wishlist.MemberID == models.Member.MemberID)
+        .group_by(models.Group.GroupID, models.Member.MemberID)
+        .order_by(func.count(models.Wishlist.WishID).desc(), func.avg(models.Wishlist.MaxPrice).desc())
+        .all()
+    )
+
+    result = []
+    for row in rows:
+        matching_available = (
+            db.query(models.Product.ProductID)
+            .join(models.ProductMemberRel, models.Product.ProductID == models.ProductMemberRel.ProductID)
+            .filter(
+                models.ProductMemberRel.MemberID == row.member_id,
+                models.Product.Status == "Available",
+            )
+            .distinct()
+            .count()
+        )
+        result.append(
+            schemas.MemberDemandResponse(
+                GroupName=row.group_name,
+                MemberID=row.member_id,
+                MemberName=row.member_name,
+                WishlistCount=int(row.wishlist_count),
+                AverageBudget=round(float(row.average_budget), 2),
+                MatchingAvailableProducts=int(matching_available),
+            )
+        )
+
+    return result
+
+
+@app.get("/analytics/seller_ranking", response_model=List[schemas.SellerRankingResponse], tags=["Analytics"])
+def get_seller_ranking(db: Session = Depends(get_db)):
+    rows = (
+        db.query(
+            models.User.UserID.label("seller_id"),
+            models.User.Account.label("account"),
+            func.count(models.Review.ReviewID).label("review_count"),
+            func.avg(models.Review.PackingScore).label("average_packing"),
+            func.avg(models.Review.VideoScore).label("average_video"),
+            func.avg(models.Review.SpeedScore).label("average_speed"),
+        )
+        .join(models.Product, models.Product.SellerID == models.User.UserID)
+        .join(models.Order, models.Order.ProductID == models.Product.ProductID)
+        .join(models.Review, models.Review.OrderID == models.Order.OrderID)
+        .group_by(models.User.UserID)
+        .order_by(
+            (
+                func.avg(models.Review.PackingScore)
+                + func.avg(models.Review.VideoScore)
+                + func.avg(models.Review.SpeedScore)
+            ).desc()
+        )
+        .all()
+    )
+
+    return [
+        schemas.SellerRankingResponse(
+            SellerID=row.seller_id,
+            Account=row.account,
+            ReviewCount=int(row.review_count),
+            AveragePacking=round(float(row.average_packing), 2),
+            AverageVideo=round(float(row.average_video), 2),
+            AverageSpeed=round(float(row.average_speed), 2),
+            TotalReputation=round(
+                (float(row.average_packing) + float(row.average_video) + float(row.average_speed)) / 3,
+                2,
+            ),
+        )
+        for row in rows
+    ]
+
+
 @app.post("/orders/", response_model=schemas.OrderResponse, tags=["Orders"])
 def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     product = (
@@ -362,7 +671,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         BuyerID=order.BuyerID,
         ProductID=order.ProductID,
         OrderPrice=product.Price,
-        Status="Completed",
+        Status="Pending",
     )
     db.add(db_order)
     product.Status = "Sold"
@@ -377,11 +686,39 @@ def get_user_orders(user_id: int, db: Session = Depends(get_db)):
     return db.query(models.Order).filter(models.Order.BuyerID == user_id).all()
 
 
+@app.patch("/orders/{order_id}/status", response_model=schemas.OrderResponse, tags=["Orders"])
+def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
+    target_status = status_update.Status.strip()
+    if target_status not in ORDER_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid order status")
+
+    order = db.query(models.Order).filter(models.Order.OrderID == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.Status == target_status:
+        return order
+
+    if target_status not in ORDER_TRANSITIONS.get(order.Status, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot move order from {order.Status} to {target_status}",
+        )
+
+    order.Status = target_status
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    return order
+
+
 @app.post("/reviews/", response_model=schemas.ReviewResponse, tags=["Orders"])
 def create_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.OrderID == review.OrderID).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    if order.Status != "Completed":
+        raise HTTPException(status_code=400, detail="Only completed orders can be reviewed")
 
     existing_review = db.query(models.Review).filter(models.Review.OrderID == review.OrderID).first()
     if existing_review:
@@ -391,6 +728,11 @@ def create_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
     db.add(db_review)
     db.commit()
     db.refresh(db_review)
+
+    product = db.query(models.Product).filter(models.Product.ProductID == order.ProductID).first()
+    if product:
+        refresh_seller_reputation(db, product.SellerID)
+
     return db_review
 
 

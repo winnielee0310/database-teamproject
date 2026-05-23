@@ -103,9 +103,67 @@ class WishlistResponse(BaseModel):
         from_attributes = True
 
 
+class WishlistMatchResponse(BaseModel):
+    WishID: int
+    MemberID: int
+    MemberName: str
+    ProductID: int
+    SellerID: int
+    ProductName: str
+    Price: float
+    Condition: str
+    TradeMethod: str
+    ImageUrl: Optional[str] = None
+    GroupNames: List[str] = Field(default_factory=list)
+    MemberNames: List[str] = Field(default_factory=list)
+
+
+class ProductWishlistMatchResponse(BaseModel):
+    WishID: int
+    UserID: int
+    Account: str
+    MemberID: int
+    MemberName: str
+    MaxPrice: float
+    ConditionReq: Optional[str] = None
+
+
+class MarketAverageResponse(BaseModel):
+    GroupName: str
+    MemberID: int
+    MemberName: str
+    TradeCount: int
+    AveragePrice: float
+    MinPrice: float
+    MaxPrice: float
+
+
+class MemberDemandResponse(BaseModel):
+    GroupName: str
+    MemberID: int
+    MemberName: str
+    WishlistCount: int
+    AverageBudget: float
+    MatchingAvailableProducts: int
+
+
+class SellerRankingResponse(BaseModel):
+    SellerID: int
+    Account: str
+    ReviewCount: int
+    AveragePacking: float
+    AverageVideo: float
+    AverageSpeed: float
+    TotalReputation: float
+
+
 class OrderCreate(BaseModel):
     BuyerID: int
     ProductID: int
+
+
+class OrderStatusUpdate(BaseModel):
+    Status: str = Field(..., min_length=1, max_length=20)
 
 
 class OrderResponse(BaseModel):

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -12,39 +12,44 @@
 </head>
 
 <body>
+    <button id="language-toggle" class="language-toggle" type="button" aria-label="Switch language">
+        <i class="fa-solid fa-language"></i>
+        <span id="language-toggle-label">中文</span>
+    </button>
+
     <div id="auth-container" class="container"
         style="display:flex; justify-content:center; align-items:center; min-height:80vh; flex-direction:column; gap:20px;">
         <div id="login-box" class="glass-panel" style="padding:2rem; width:100%; max-width:400px; text-align:center;">
-            <h2 style="margin-bottom:1.5rem; color:var(--primary);">Login</h2>
+            <h2 style="margin-bottom:1.5rem; color:var(--primary);" data-i18n="login.title">Login</h2>
             <div id="login-error" style="color:#e11d48; margin-bottom:1rem; display:none;"></div>
-            <input type="email" id="login-email" placeholder="Email"
+            <input type="email" id="login-email" data-i18n-placeholder="login.email" placeholder="Email"
                 style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
-            <input type="password" id="login-password" placeholder="Password"
+            <input type="password" id="login-password" data-i18n-placeholder="login.password" placeholder="Password"
                 style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
-            <button onclick="handleLogin()" class="btn-primary" style="width:100%; margin-bottom:15px;">Login</button>
+            <button onclick="handleLogin()" class="btn-primary" style="width:100%; margin-bottom:15px;" data-i18n="login.submit">Login</button>
             <p style="color:var(--text-muted); font-size:0.9rem;">
-                No account?
-                <a href="#" onclick="showRegisterPage(); return false;" style="color:var(--primary); font-weight:bold;">Register</a>
+                <span data-i18n="login.noAccount">No account?</span>
+                <a href="#" onclick="showRegisterPage(); return false;" style="color:var(--primary); font-weight:bold;" data-i18n="login.registerLink">Register</a>
             </p>
-            <p style="color:var(--text-muted); font-size:0.8rem; margin-top:10px;">Demo: winnie@example.com / hashed_pw_1</p>
+            <p style="color:var(--text-muted); font-size:0.8rem; margin-top:10px;" data-i18n="login.demo">Demo: winnie@example.com / hashed_pw_1</p>
         </div>
 
         <div id="register-box" class="glass-panel"
             style="padding:2rem; width:100%; max-width:400px; text-align:center; display:none;">
-            <h2 style="margin-bottom:1.5rem; color:var(--secondary);">Register</h2>
+            <h2 style="margin-bottom:1.5rem; color:var(--secondary);" data-i18n="register.title">Register</h2>
             <div id="register-error" style="color:#e11d48; margin-bottom:1rem; display:none;"></div>
-            <input type="text" id="reg-username" placeholder="Username"
+            <input type="text" id="reg-username" data-i18n-placeholder="register.username" placeholder="Username"
                 style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
-            <input type="email" id="reg-email" placeholder="Email"
+            <input type="email" id="reg-email" data-i18n-placeholder="login.email" placeholder="Email"
                 style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
-            <input type="password" id="reg-password" placeholder="Password"
+            <input type="password" id="reg-password" data-i18n-placeholder="login.password" placeholder="Password"
                 style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
-            <input type="password" id="reg-password-confirm" placeholder="Confirm password"
+            <input type="password" id="reg-password-confirm" data-i18n-placeholder="register.confirmPassword" placeholder="Confirm password"
                 style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
-            <button onclick="handleRegister()" class="btn-primary" style="width:100%; margin-bottom:15px;">Register</button>
+            <button onclick="handleRegister()" class="btn-primary" style="width:100%; margin-bottom:15px;" data-i18n="register.submit">Register</button>
             <p style="color:var(--text-muted); font-size:0.9rem;">
-                Already registered?
-                <a href="#" onclick="showLoginPage(); return false;" style="color:var(--primary); font-weight:bold;">Back to login</a>
+                <span data-i18n="register.already">Already registered?</span>
+                <a href="#" onclick="showLoginPage(); return false;" style="color:var(--primary); font-weight:bold;" data-i18n="register.backLogin">Back to login</a>
             </p>
         </div>
     </div>
@@ -53,19 +58,21 @@
         <header class="glass-header">
             <div class="logo"><i class="fa-solid fa-star"></i> Idol Trade</div>
             <nav>
-                <a href="#" class="active" onclick="switchTab(event, 'home')">Home</a>
-                <a href="#" onclick="switchTab(event, 'wishlist')">Wishlist</a>
-                <a href="#" onclick="switchTab(event, 'orders')">Orders</a>
-                <a href="#" onclick="switchTab(event, 'sell')">Sell</a>
+                <a href="#" class="active" onclick="switchTab(event, 'home')" data-i18n="nav.home">Home</a>
+                <a href="#" onclick="switchTab(event, 'wishlist')" data-i18n="nav.wishlist">Wishlist</a>
+                <a href="#" onclick="switchTab(event, 'orders')" data-i18n="nav.orders">Orders</a>
+                <a href="#" onclick="switchTab(event, 'sell')" data-i18n="nav.sell">Sell</a>
+                <a href="#" onclick="switchTab(event, 'analytics')" data-i18n="nav.analytics">Analytics</a>
                 <a href="#" onclick="switchTab(event, 'messages')" style="position:relative;">
-                    Messages <span id="nav-unread-badge" class="nav-badge" style="display:none;">0</span>
+                    <span data-i18n="nav.messages">Messages</span>
+                    <span id="nav-unread-badge" class="nav-badge" style="display:none;">0</span>
                 </a>
-                <a href="#" onclick="switchTab(event, 'profile')">Profile</a>
+                <a href="#" onclick="switchTab(event, 'profile')" data-i18n="nav.profile">Profile</a>
             </nav>
             <div class="user-profile">
                 <span id="current-username-display" style="color:var(--primary); font-weight:bold;">User</span>
                 <button onclick="handleLogout()" class="btn-primary"
-                    style="padding:6px 12px; font-size:0.8rem; background:var(--text-muted);">Logout</button>
+                    style="padding:6px 12px; font-size:0.8rem; background:var(--text-muted);" data-i18n="nav.logout">Logout</button>
                 <img src="https://ui-avatars.com/api/?name=User&background=f472b6&color=fff" alt="User" id="user-avatar">
                 <span id="reputation-badge" class="reputation">Reputation 5.0</span>
             </div>
@@ -74,21 +81,21 @@
         <main class="container">
             <div id="tab-home" class="tab-content active">
                 <section class="hero glass-panel">
-                    <h1>Find your <span class="gradient-text">idol goods</span></h1>
-                    <p>Search by group or member, then buy, chat, and review in one place.</p>
+                    <h1><span data-i18n="home.titlePrefix">Find your</span> <span class="gradient-text" data-i18n="home.titleAccent">idol goods</span></h1>
+                    <p data-i18n="home.subtitle">Search by group or member, then buy, chat, and review in one place.</p>
                     <div class="search-bar" style="flex-wrap:wrap; gap:10px;">
-                        <input type="text" id="group-search-input" list="popular-groups" placeholder="Group name"
+                        <input type="text" id="group-search-input" list="popular-groups" data-i18n-placeholder="common.groupName" placeholder="Group name"
                             style="padding:12px 20px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); flex:1; outline:none; color:var(--text-main);">
-                        <input type="text" id="member-search-input" list="popular-members" placeholder="Member name"
+                        <input type="text" id="member-search-input" list="popular-members" data-i18n-placeholder="common.memberName" placeholder="Member name"
                             style="padding:12px 20px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); flex:1; outline:none; color:var(--text-main);">
                         <button id="search-btn" class="btn-primary" onclick="searchProducts()">
-                            <i class="fa-solid fa-magnifying-glass"></i> Search
+                            <i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="home.search">Search</span>
                         </button>
                     </div>
                 </section>
                 <section class="product-section">
                     <div class="section-title">
-                        <h2>Results <span id="result-count">(0)</span></h2>
+                        <h2><span data-i18n="home.results">Results</span> <span id="result-count">(0)</span></h2>
                     </div>
                     <div id="product-grid" class="product-grid"></div>
                 </section>
@@ -96,21 +103,21 @@
 
             <div id="tab-wishlist" class="tab-content" style="display:none;">
                 <section class="hero glass-panel">
-                    <h2><i class="fa-solid fa-heart" style="color:var(--secondary);"></i> Wishlist</h2>
-                    <p>Add a member and budget so sellers can see what buyers want.</p>
+                    <h2><i class="fa-solid fa-heart" style="color:var(--secondary);"></i> <span data-i18n="wishlist.title">Wishlist</span></h2>
+                    <p data-i18n="wishlist.subtitle">Add a member and budget so sellers can see what buyers want.</p>
                     <div class="search-bar" style="margin-top:1rem; flex-wrap:wrap; gap:10px;">
-                        <input type="text" id="wish-group-input" list="popular-groups" placeholder="Group name"
+                        <input type="text" id="wish-group-input" list="popular-groups" data-i18n-placeholder="common.groupName" placeholder="Group name"
                             style="padding:12px 20px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); flex:1; outline:none; color:var(--text-main);">
-                        <input type="text" id="wish-member-input" list="popular-members" placeholder="Member name"
+                        <input type="text" id="wish-member-input" list="popular-members" data-i18n-placeholder="common.memberName" placeholder="Member name"
                             style="padding:12px 20px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); flex:1; outline:none; color:var(--text-main);">
-                        <input type="number" id="wish-price" placeholder="Max price"
+                        <input type="number" id="wish-price" data-i18n-placeholder="wishlist.maxPrice" placeholder="Max price"
                             style="padding:12px 20px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); flex:1; outline:none; color:var(--text-main);">
-                        <button onclick="addWishlist()" class="btn-primary">Add</button>
+                        <button onclick="addWishlist()" class="btn-primary" data-i18n="common.add">Add</button>
                     </div>
                 </section>
                 <section class="product-section">
                     <div class="section-title">
-                        <h2>My Wishlist</h2>
+                        <h2 data-i18n="wishlist.myWishlist">My Wishlist</h2>
                     </div>
                     <div id="wishlist-grid" class="product-grid"></div>
                 </section>
@@ -119,7 +126,7 @@
             <div id="tab-orders" class="tab-content" style="display:none;">
                 <section class="product-section">
                     <div class="section-title">
-                        <h2><i class="fa-solid fa-box-open" style="color:var(--secondary);"></i> Orders</h2>
+                        <h2><i class="fa-solid fa-box-open" style="color:var(--secondary);"></i> <span data-i18n="orders.title">Orders</span></h2>
                     </div>
                     <div id="orders-grid" class="product-grid"></div>
                 </section>
@@ -127,50 +134,75 @@
 
             <div id="tab-sell" class="tab-content" style="display:none;">
                 <section class="hero glass-panel">
-                    <h2><i class="fa-solid fa-store" style="color:var(--secondary);"></i> Sell an item</h2>
-                    <p>List an item with member tags so buyers can find it quickly.</p>
+                    <h2><i class="fa-solid fa-store" style="color:var(--secondary);"></i> <span data-i18n="sell.title">Sell an item</span></h2>
+                    <p data-i18n="sell.subtitle">List an item with member tags so buyers can find it quickly.</p>
                     <div
                         style="display:flex; flex-direction:column; gap:15px; max-width:500px; margin:2rem auto 0 auto; text-align:left;">
-                        <label style="color:var(--text-muted); font-weight:600;">Group</label>
-                        <input type="text" id="sell-group-name" placeholder="Example: NewJeans"
+                        <label style="color:var(--text-muted); font-weight:600;" data-i18n="common.group">Group</label>
+                        <input type="text" id="sell-group-name" data-i18n-placeholder="sell.groupExample" placeholder="Example: NewJeans"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
-                        <label style="color:var(--text-muted); font-weight:600;">Members</label>
-                        <input type="text" id="sell-member-names" placeholder="Example: Minji, Hanni"
+                        <label style="color:var(--text-muted); font-weight:600;" data-i18n="common.members">Members</label>
+                        <input type="text" id="sell-member-names" data-i18n-placeholder="sell.membersExample" placeholder="Example: Minji, Hanni"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
-                        <input type="text" id="sell-name" placeholder="Product name"
+                        <input type="text" id="sell-name" data-i18n-placeholder="sell.productName" placeholder="Product name"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
-                        <input type="number" id="sell-price" placeholder="Price"
+                        <input type="number" id="sell-price" data-i18n-placeholder="sell.price" placeholder="Price"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
-                        <input type="text" id="sell-desc" placeholder="Description"
+                        <input type="text" id="sell-desc" data-i18n-placeholder="sell.description" placeholder="Description"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
                         <select id="sell-condition"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
-                            <option value="New">New</option>
-                            <option value="Like New">Like New</option>
-                            <option value="Used - Good">Used - Good</option>
-                            <option value="Used - Fair">Used - Fair</option>
+                            <option value="New" data-i18n="value.New">New</option>
+                            <option value="Like New" data-i18n="value.Like New">Like New</option>
+                            <option value="Used - Good" data-i18n="value.Used - Good">Used - Good</option>
+                            <option value="Used - Fair" data-i18n="value.Used - Fair">Used - Fair</option>
                         </select>
-                        <label style="color:var(--text-muted); font-weight:600;">Image</label>
+                        <label style="color:var(--text-muted); font-weight:600;" data-i18n="sell.image">Image</label>
                         <input type="file" id="sell-image" accept="image/*"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
                         <select id="sell-method"
                             style="padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none; color:var(--text-main);">
-                            <option value="Meetup">Meetup</option>
-                            <option value="Shipping">Shipping</option>
-                            <option value="Mailing">Mailing</option>
+                            <option value="Meetup" data-i18n="value.Meetup">Meetup</option>
+                            <option value="Shipping" data-i18n="value.Shipping">Shipping</option>
+                            <option value="Mailing" data-i18n="value.Mailing">Mailing</option>
                         </select>
-                        <button onclick="sellProduct()" class="btn-primary" style="margin-top:10px;">Publish</button>
+                        <button onclick="sellProduct()" class="btn-primary" style="margin-top:10px;" data-i18n="sell.publish">Publish</button>
+                    </div>
+                </section>
+            </div>
+
+            <div id="tab-analytics" class="tab-content" style="display:none;">
+                <section class="product-section">
+                    <div class="section-title">
+                        <h2><i class="fa-solid fa-chart-line" style="color:var(--primary);"></i> <span data-i18n="analytics.title">Database Insights</span></h2>
+                    </div>
+                    <div class="product-grid">
+                        <div class="product-card">
+                            <div class="tags"><span class="tag method" data-i18n="analytics.marketTag">GROUP BY / AVG</span></div>
+                            <h3 data-i18n="analytics.marketTitle">Market historical average</h3>
+                            <div id="analytics-market"></div>
+                        </div>
+                        <div class="product-card">
+                            <div class="tags"><span class="tag method" data-i18n="analytics.demandTag">Wishlist matching</span></div>
+                            <h3 data-i18n="analytics.demandTitle">Member demand heat</h3>
+                            <div id="analytics-demand"></div>
+                        </div>
+                        <div class="product-card">
+                            <div class="tags"><span class="tag method" data-i18n="analytics.reputationTag">Review aggregation</span></div>
+                            <h3 data-i18n="analytics.reputationTitle">Seller reputation ranking</h3>
+                            <div id="analytics-reputation"></div>
+                        </div>
                     </div>
                 </section>
             </div>
 
             <div id="tab-messages" class="tab-content" style="display:none;">
                 <section class="hero glass-panel">
-                    <h2><i class="fa-solid fa-comments" style="color:var(--primary);"></i> Messages</h2>
+                    <h2><i class="fa-solid fa-comments" style="color:var(--primary);"></i> <span data-i18n="messages.title">Messages</span></h2>
                     <div id="messages-container"
                         style="margin-top:2rem; max-width:600px; margin-inline:auto; text-align:left;">
                         <ul id="messages-list" style="padding:0; list-style-type:none;">
-                            <li style="text-align:center; color:var(--text-muted);">Loading...</li>
+                            <li style="text-align:center; color:var(--text-muted);" data-i18n="common.loading">Loading...</li>
                         </ul>
                     </div>
                 </section>
@@ -178,7 +210,7 @@
 
             <div id="tab-profile" class="tab-content" style="display:none;">
                 <section class="hero glass-panel">
-                    <h2><i class="fa-solid fa-user" style="color:var(--secondary);"></i> Profile</h2>
+                    <h2><i class="fa-solid fa-user" style="color:var(--secondary);"></i> <span data-i18n="profile.title">Profile</span></h2>
                     <div id="profile-container"
                         style="margin-top:2rem; text-align:left; max-width:480px; margin-inline:auto; font-size:1.05rem; line-height:1.8;">
                     </div>
@@ -190,10 +222,10 @@
     <div id="buy-modal" class="modal">
         <div class="modal-content glass-panel">
             <span id="buy-modal-close" class="close-btn">&times;</span>
-            <h2>Confirm purchase</h2>
-            <p>Buy this item for <span id="modal-price" class="gradient-text"></span>?</p>
+            <h2 data-i18n="buy.title">Confirm purchase</h2>
+            <p><span data-i18n="buy.questionPrefix">Buy this item for</span> <span id="modal-price" class="gradient-text"></span>?</p>
             <div class="modal-actions">
-                <button id="confirm-buy-btn" class="btn-primary">Confirm</button>
+                <button id="confirm-buy-btn" class="btn-primary" data-i18n="common.confirm">Confirm</button>
             </div>
         </div>
     </div>
@@ -201,35 +233,35 @@
     <div id="review-modal" class="modal">
         <div class="modal-content glass-panel" style="text-align:left;">
             <span class="close-btn" onclick="document.getElementById('review-modal').classList.remove('show')">&times;</span>
-            <h2 style="margin-bottom:15px; text-align:center;">Review seller</h2>
+            <h2 style="margin-bottom:15px; text-align:center;" data-i18n="review.title">Review seller</h2>
             <div style="margin-bottom:10px;">
-                <label>Packing score (1-5)</label>
+                <label data-i18n="review.packing">Packing score (1-5)</label>
                 <input type="number" id="review-packing" min="1" max="5" value="5"
                     style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
             </div>
             <div style="margin-bottom:10px;">
-                <label>Video proof score (1-5)</label>
+                <label data-i18n="review.video">Video proof score (1-5)</label>
                 <input type="number" id="review-video" min="1" max="5" value="5"
                     style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
             </div>
             <div style="margin-bottom:10px;">
-                <label>Speed score (1-5)</label>
+                <label data-i18n="review.speed">Speed score (1-5)</label>
                 <input type="number" id="review-speed" min="1" max="5" value="5"
                     style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;">
             </div>
             <div style="margin-bottom:15px;">
-                <label>Comment</label>
+                <label data-i18n="review.comment">Comment</label>
                 <textarea id="review-comment" rows="3"
                     style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.8); outline:none;"></textarea>
             </div>
-            <button onclick="submitReview()" class="btn-primary" style="width:100%;">Submit review</button>
+            <button onclick="submitReview()" class="btn-primary" style="width:100%;" data-i18n="review.submit">Submit review</button>
         </div>
     </div>
 
     <div id="product-modal" class="modal">
         <div class="modal-content glass-panel" style="text-align:left; max-width:640px;">
             <span class="close-btn" onclick="document.getElementById('product-modal').classList.remove('show')">&times;</span>
-            <h2 style="margin-bottom:15px; text-align:center;">Product details</h2>
+            <h2 style="margin-bottom:15px; text-align:center;" data-i18n="detail.title">Product details</h2>
             <div style="display:flex; gap:20px; flex-wrap:wrap;">
                 <div style="flex:1; min-width:220px;">
                     <div id="detail-image-container"
@@ -241,23 +273,23 @@
                 <div style="flex:1; min-width:250px;">
                     <h3 id="detail-title" style="margin-bottom:10px;"></h3>
                     <div class="price" id="detail-price" style="font-size:1.5rem; margin-bottom:10px; color:var(--secondary);"></div>
-                    <p style="margin-bottom:5px;"><strong>Name:</strong> <span id="detail-name"></span></p>
-                    <p style="margin-bottom:5px;"><strong>Description:</strong> <span id="detail-desc"></span></p>
-                    <p style="margin-bottom:5px;"><strong>Condition:</strong> <span id="detail-condition"></span></p>
-                    <p style="margin-bottom:5px;"><strong>Trade:</strong> <span id="detail-method"></span></p>
+                    <p style="margin-bottom:5px;"><strong data-i18n="detail.name">Name:</strong> <span id="detail-name"></span></p>
+                    <p style="margin-bottom:5px;"><strong data-i18n="detail.description">Description:</strong> <span id="detail-desc"></span></p>
+                    <p style="margin-bottom:5px;"><strong data-i18n="detail.condition">Condition:</strong> <span id="detail-condition"></span></p>
+                    <p style="margin-bottom:5px;"><strong data-i18n="detail.trade">Trade:</strong> <span id="detail-method"></span></p>
                     <div style="margin-top:15px; padding:15px; background:rgba(255,255,255,0.4); border-radius:8px;">
-                        <h4 style="margin-bottom:10px; border-bottom:1px solid var(--glass-border); padding-bottom:5px;">Seller</h4>
-                        <p><strong>Seller ID:</strong> <span id="detail-seller-id"></span></p>
-                        <p><strong>Reputation:</strong> <span id="detail-seller-rep">Loading...</span></p>
+                        <h4 style="margin-bottom:10px; border-bottom:1px solid var(--glass-border); padding-bottom:5px;" data-i18n="detail.seller">Seller</h4>
+                        <p><strong data-i18n="detail.sellerId">Seller ID:</strong> <span id="detail-seller-id"></span></p>
+                        <p><strong data-i18n="detail.reputation">Reputation:</strong> <span id="detail-seller-rep">Loading...</span></p>
                     </div>
                 </div>
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button id="detail-chat-btn" class="btn-primary"
                     style="flex:1; padding:12px; font-size:1rem; background:transparent; border:1px solid var(--primary); color:var(--primary);">
-                    <i class="fa-regular fa-comment"></i> Chat
+                    <i class="fa-regular fa-comment"></i> <span data-i18n="common.chat">Chat</span>
                 </button>
-                <button id="detail-buy-btn" class="btn-primary" style="flex:1; padding:12px; font-size:1rem;">Buy</button>
+                <button id="detail-buy-btn" class="btn-primary" style="flex:1; padding:12px; font-size:1rem;" data-i18n="common.buy">Buy</button>
             </div>
         </div>
     </div>
@@ -272,9 +304,9 @@
                 style="flex:1; overflow-y:auto; background:rgba(255,255,255,0.4); border-radius:8px; padding:15px; margin-bottom:15px; display:flex; flex-direction:column; gap:10px; border:1px solid var(--glass-border);">
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
-                <input type="text" id="chat-input" placeholder="Type a message..."
+                <input type="text" id="chat-input" data-i18n-placeholder="messages.input" placeholder="Type a message..."
                     style="flex:1; padding:12px; border:1px solid var(--glass-border); border-radius:8px; outline:none; background:rgba(255,255,255,0.8);">
-                <button class="btn-primary" id="chat-send-btn" style="width:60px; padding:12px; border-radius:8px;">
+                <button class="btn-primary" id="chat-send-btn" style="width:60px; padding:12px; border-radius:8px;" aria-label="Send message">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
             </div>
