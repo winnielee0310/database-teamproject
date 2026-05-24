@@ -1,10 +1,12 @@
 import shutil
+from html import escape
 from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -55,6 +57,8 @@ ensure_database_indexes()
 app = FastAPI(
     title="Idol Merchandise Trading API",
     description="FastAPI backend for an idol merchandise trading demo.",
+    docs_url=None,
+    redoc_url=None,
 )
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
@@ -65,6 +69,221 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+DOC_ENDPOINT_NOTES = {
+    ("POST", "/auth/register"): ("註冊會員", "Member", "登入 / 註冊畫面"),
+    ("POST", "/auth/login"): ("會員登入", "Member", "登入畫面，成功後保存 currentUserId"),
+    ("GET", "/users/{user_id}"): ("會員資料", "Member", "右上角會員資訊與個人資料頁"),
+    ("GET", "/users/{user_id}/reputation"): ("賣家信譽", "Review + Order + Product", "商品詳細頁、個人評分"),
+    ("GET", "/users/{user_id}/sold_products"): ("賣家上架商品", "Product", "個人資料頁"),
+    ("GET", "/users/{user_id}/orders"): ("買家訂單", "Order + Product", "訂單頁"),
+    ("GET", "/users/{user_id}/wishlist_matches"): ("願望清單媒合", "Wishlist + Product_Member_Rel + Product", "願望清單頁的 Matched products"),
+    ("GET", "/groups/"): ("團體清單", "Group", "搜尋、上架、願望清單輸入提示"),
+    ("GET", "/groups/{group_name}/members/"): ("成員清單", "Group + Member", "依團體取得成員"),
+    ("POST", "/products/"): ("上架商品", "Product + Product_Member_Rel", "上架頁"),
+    ("GET", "/products/search"): ("搜尋商品", "Product + Member + Group", "首頁搜尋結果"),
+    ("POST", "/upload"): ("上傳圖片", "uploads folder + Product.ImageUrl", "上架頁商品圖片"),
+    ("POST", "/wishlist/"): ("新增願望", "Wishlist + Member", "願望清單頁"),
+    ("GET", "/wishlist/{user_id}"): ("查看願望", "Wishlist + Member", "我的願望清單"),
+    ("GET", "/analytics/market_average"): ("市場均價分析", "Order + Product + Member + Group", "分析頁：GROUP BY / AVG"),
+    ("GET", "/analytics/member_demand"): ("成員需求熱度", "Wishlist + Product", "分析頁：Wishlist matching"),
+    ("GET", "/analytics/seller_ranking"): ("賣家排行", "Review + Order + Product + Member", "分析頁：Review aggregation"),
+    ("POST", "/orders/"): ("建立訂單", "Order + Product", "商品卡片 Buy"),
+    ("PATCH", "/orders/{order_id}/status"): ("更新訂單狀態", "Order.Status", "訂單流程 Pending -> Shipped -> Completed"),
+    ("POST", "/reviews/"): ("留下評價", "Review + Member.SellerReputation", "訂單完成後評價賣家"),
+    ("POST", "/chats/"): ("建立聊天室", "Chat", "商品詳細頁 Chat"),
+    ("GET", "/chats/{user_id}"): ("聊天室列表", "Chat + ChatMessage", "訊息頁左側列表"),
+    ("GET", "/messages/{chat_id}"): ("讀取訊息", "ChatMessage", "訊息頁對話內容"),
+    ("POST", "/messages/send"): ("送出訊息", "ChatMessage", "訊息輸入框"),
+    ("PATCH", "/messages/{chat_id}/read"): ("標記已讀", "ChatMessage.IsRead", "打開聊天室時自動執行"),
+}
+
+
+def _schema_name(operation: dict, key: str) -> str:
+    if key == "request":
+        content = operation.get("requestBody", {}).get("content", {})
+    else:
+        content = operation.get("responses", {}).get("200", {}).get("content", {})
+    if not content:
+        return "-"
+    schema = next(iter(content.values()), {}).get("schema", {})
+    if "$ref" in schema:
+        return schema["$ref"].split("/")[-1]
+    if schema.get("items", {}).get("$ref"):
+        return f"List[{schema['items']['$ref'].split('/')[-1]}]"
+    return schema.get("type", "-")
+
+
+@app.get("/docs", include_in_schema=False)
+def local_docs() -> HTMLResponse:
+    methods = {"get", "post", "patch", "put", "delete"}
+    grouped: dict[str, list[str]] = {}
+
+    for path, operations in app.openapi()["paths"].items():
+        if path == "/docs":
+            continue
+        for method, operation in operations.items():
+            if method not in methods:
+                continue
+            method_upper = method.upper()
+            tag = operation.get("tags", ["Other"])[0]
+            function, tables, frontend = DOC_ENDPOINT_NOTES.get(
+                (method_upper, path),
+                (operation.get("summary", "API endpoint"), "依端點資料模型", "前端 fetch 呼叫"),
+            )
+            row = f"""
+                <article class="endpoint">
+                    <div class="endpoint-head">
+                        <span class="method {method.lower()}">{escape(method_upper)}</span>
+                        <code>{escape(path)}</code>
+                    </div>
+                    <p class="summary">{escape(function)}</p>
+                    <div class="meta-grid">
+                        <div><strong>資料庫對應</strong><span>{escape(tables)}</span></div>
+                        <div><strong>前端對應</strong><span>{escape(frontend)}</span></div>
+                        <div><strong>Request schema</strong><span>{escape(_schema_name(operation, "request"))}</span></div>
+                        <div><strong>Response schema</strong><span>{escape(_schema_name(operation, "response"))}</span></div>
+                    </div>
+                </article>
+            """
+            grouped.setdefault(tag, []).append(row)
+
+    sections = "\n".join(
+        f"""
+        <section class="tag-section">
+            <h2>{escape(tag)}</h2>
+            <div class="endpoint-list">{''.join(rows)}</div>
+        </section>
+        """
+        for tag, rows in sorted(grouped.items())
+    )
+
+    return HTMLResponse(
+        f"""
+        <!doctype html>
+        <html lang="zh-Hant">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Idol Merchandise Trading API Docs</title>
+            <style>
+                :root {{
+                    --ink: #26324a;
+                    --muted: #64748b;
+                    --line: #f8cddd;
+                    --pink: #f472b6;
+                    --rose: #fb7185;
+                    --blue: #486581;
+                    --bg: #fff1f4;
+                    --card: rgba(255, 255, 255, 0.86);
+                }}
+                * {{ box-sizing: border-box; }}
+                body {{
+                    margin: 0;
+                    font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif;
+                    color: var(--ink);
+                    background: var(--bg);
+                }}
+                header {{
+                    padding: 34px 64px 26px;
+                    background: white;
+                    border-bottom: 1px solid #ffe0eb;
+                }}
+                h1 {{ margin: 0 0 10px; font-size: 34px; }}
+                .subtitle {{ margin: 0; color: var(--muted); font-size: 16px; }}
+                .quick-map {{
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 14px;
+                    padding: 28px 64px 12px;
+                }}
+                .map-card, .endpoint {{
+                    background: var(--card);
+                    border: 1px solid white;
+                    border-radius: 8px;
+                    box-shadow: 0 14px 34px rgba(244, 114, 182, 0.12);
+                }}
+                .map-card {{ padding: 18px; }}
+                .map-card strong {{ display: block; margin-bottom: 8px; color: var(--rose); }}
+                .map-card span {{ color: var(--muted); line-height: 1.55; }}
+                main {{ padding: 12px 64px 60px; }}
+                .tag-section {{ margin-top: 28px; }}
+                h2 {{ margin: 0 0 14px; font-size: 24px; }}
+                .endpoint-list {{
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 14px;
+                }}
+                .endpoint {{ padding: 18px; }}
+                .endpoint-head {{ display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }}
+                code {{
+                    color: #1e293b;
+                    font-size: 14px;
+                    overflow-wrap: anywhere;
+                }}
+                .method {{
+                    min-width: 58px;
+                    text-align: center;
+                    padding: 6px 9px;
+                    border-radius: 999px;
+                    color: white;
+                    font-size: 12px;
+                    font-weight: 800;
+                }}
+                .get {{ background: #38bdf8; }}
+                .post {{ background: var(--pink); }}
+                .patch {{ background: #f59e0b; }}
+                .put {{ background: #6366f1; }}
+                .delete {{ background: #ef4444; }}
+                .summary {{ margin: 14px 0; font-weight: 800; }}
+                .meta-grid {{
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 10px;
+                }}
+                .meta-grid div {{
+                    padding: 10px;
+                    border: 1px solid #ffe0eb;
+                    border-radius: 8px;
+                    background: rgba(255, 255, 255, 0.62);
+                }}
+                .meta-grid strong {{
+                    display: block;
+                    margin-bottom: 4px;
+                    color: var(--rose);
+                    font-size: 12px;
+                }}
+                .meta-grid span {{ color: var(--blue); line-height: 1.45; }}
+                .openapi-link {{
+                    display: inline-block;
+                    margin-top: 14px;
+                    color: var(--rose);
+                    font-weight: 800;
+                    text-decoration: none;
+                }}
+                @media (max-width: 920px) {{
+                    header, main, .quick-map {{ padding-left: 22px; padding-right: 22px; }}
+                    .quick-map, .endpoint-list {{ grid-template-columns: 1fr; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <header>
+                <h1>Idol Merchandise Trading API</h1>
+                <p class="subtitle">本機版後端文件：不用外部 CDN，也能展示 API、資料庫表格與前端功能的對應關係。</p>
+                <a class="openapi-link" href="/openapi.json">查看原始 OpenAPI JSON</a>
+            </header>
+            <div class="quick-map">
+                <div class="map-card"><strong>會員與信譽</strong><span>Member 儲存會員帳號與 SellerReputation，Review 聚合後回寫信譽分數。</span></div>
+                <div class="map-card"><strong>商品與偶像標籤</strong><span>Product 透過 Product_Member_Rel 多對多連到 Member，可支援一張小卡標多位成員。</span></div>
+                <div class="map-card"><strong>願望清單媒合</strong><span>Wishlist 與 Product_Member_Rel 比對成員，再檢查價格與商品狀態。</span></div>
+                <div class="map-card"><strong>訂單與分析</strong><span>Order 串接購買流程，Analytics 用 GROUP BY / AVG 呈現市場均價、需求與賣家排行。</span></div>
+            </div>
+            <main>{sections}</main>
+        </body>
+        </html>
+        """
+    )
 
 
 def product_to_response(product: models.Product) -> schemas.ProductResponse:
